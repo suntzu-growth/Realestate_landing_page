@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useConversation } from "@elevenlabs/react";
 import { Header } from "@/components/header";
 import { SearchHero } from "@/components/search-hero";
 import { SearchInput } from "@/components/search-input";
@@ -9,16 +10,13 @@ import { TopicSelector } from "@/components/topic-selector";
 import { ResultsStream } from "@/components/results-stream";
 import { Footer } from "@/components/footer";
 
-import { ScheduleParser } from "@/lib/schedule-parser";
-import { scheduleData } from "@/data/schedule-loader";
-import { SIMULATED_ANSWERS } from "@/data/simulated-answers";
-
 interface Message {
   role: 'user' | 'assistant';
   content?: string;
   results?: any[];
   isStreaming?: boolean;
   directAnswer?: string;
+  type?: string;
 }
 
 export default function Home() {
@@ -26,154 +24,235 @@ export default function Home() {
   const [isStreaming, setIsStreaming] = useState(false);
   const [isAgentEnabled, setIsAgentEnabled] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const conversationRef = useRef<any>(null);
-  const [accumulatedText, setAccumulatedText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when messages change
+  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Initialize text-only conversation with ElevenLabs
+  // Client Tools - ESTOS SON LOS QUE MUESTRAN LAS RESPUESTAS EN EL UI
+  const clientTools = {
+    displayTextResponse: async ({ text }: { text: string }) => {
+      console.log('[Client Tool] displayTextResponse:', text);
+      
+      setMessages(prev => {
+        const updated = [...prev];
+        // Remover placeholder si existe
+        if (updated.length > 0 && updated[updated.length - 1].isStreaming) {
+          updated.pop();
+        }
+        return [...updated, {
+          role: 'assistant',
+          content: text,
+          isStreaming: false,
+        }];
+      });
+      
+      setIsStreaming(false);
+      return { success: true };
+    },
+
+    displayNewsResults: async ({ news, summary }: { news: any[], summary?: string }) => {
+      console.log('[Client Tool] displayNewsResults:', news.length, 'noticias');
+      
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0 && updated[updated.length - 1].isStreaming) {
+          updated.pop();
+        }
+        return [...updated, {
+          role: 'assistant',
+          results: news,
+          content: summary,
+          isStreaming: false,
+          type: 'news',
+        }];
+      });
+      
+      setIsStreaming(false);
+      return { success: true, displayed: news.length };
+    },
+
+    displaySportsResults: async ({ news, summary }: { news: any[], summary?: string }) => {
+      console.log('[Client Tool] displaySportsResults:', news.length, 'deportes');
+      
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0 && updated[updated.length - 1].isStreaming) {
+          updated.pop();
+        }
+        return [...updated, {
+          role: 'assistant',
+          results: news,
+          content: summary,
+          isStreaming: false,
+          type: 'sports',
+        }];
+      });
+      
+      setIsStreaming(false);
+      return { success: true, displayed: news.length };
+    },
+
+    displaySchedule: async ({ schedule, summary, type }: { schedule: any[], summary?: string, type?: string }) => {
+      console.log('[Client Tool] displaySchedule:', schedule.length, 'programas');
+      
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0 && updated[updated.length - 1].isStreaming) {
+          updated.pop();
+        }
+        return [...updated, {
+          role: 'assistant',
+          results: schedule,
+          content: summary,
+          isStreaming: false,
+          type: type || 'schedule',
+        }];
+      });
+      
+      setIsStreaming(false);
+      return { success: true, displayed: schedule.length };
+    },
+
+    displayError: async ({ message }: { message: string }) => {
+      console.log('[Client Tool] displayError:', message);
+      
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0 && updated[updated.length - 1].isStreaming) {
+          updated.pop();
+        }
+        return [...updated, {
+          role: 'assistant',
+          content: `⚠️ ${message}`,
+          isStreaming: false,
+        }];
+      });
+      
+      setIsStreaming(false);
+      return { success: true };
+    },
+  };
+
+  // ElevenLabs Conversation con useConversation
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log('[Agent] Connected');
+      setIsAgentEnabled(true);
+    },
+    onDisconnect: () => {
+      console.log('[Agent] Disconnected');
+      setIsAgentEnabled(false);
+    },
+    onMessage: (message: any) => {
+      console.log('[Agent Message]:', message);
+      
+      // Filtrar mensajes idle
+      const text = message.message || message.text || '';
+      if (text) {
+        const ignoredPhrases = ["estás ahí", "are you still there", "sigues ahí", "irabazi arte"];
+        if (ignoredPhrases.some(phrase => text.toLowerCase().includes(phrase))) {
+          console.log('[Agent] Mensaje ignorado (idle/genérico)');
+          return;
+        }
+      }
+
+      // Detectar fin de respuesta del agente
+      if (message.type === 'agent_response_end' || message.is_final) {
+        console.log('[Agent] Respuesta finalizada');
+        setIsStreaming(false);
+      }
+    },
+    onError: (error) => {
+      console.error('[Agent Error]:', error);
+      setIsStreaming(false);
+      
+      // Mostrar error al usuario
+      setMessages(prev => {
+        const updated = [...prev];
+        if (updated.length > 0 && updated[updated.length - 1].isStreaming) {
+          updated.pop();
+        }
+        return [...updated, {
+          role: 'assistant',
+          content: '⚠️ Error conectando con el agente. Por favor intenta de nuevo.',
+          isStreaming: false,
+        }];
+      });
+    },
+    clientTools, // IMPORTANTE: Registrar los client tools
+  });
+
+  // Auto-connect
   useEffect(() => {
-    const initConversation = async () => {
+    const connectAgent = async () => {
       try {
-        // Dynamically import to avoid SSR issues
-        const { TextConversation } = await import('@elevenlabs/client');
-
         const response = await fetch("/api/get-signed-url");
-        if (!response.ok) throw new Error("Failed to get signed URL");
-
+        if (!response.ok) throw new Error("Failed to get auth");
         const { signedUrl } = await response.json();
 
-        const conversation = await TextConversation.startSession({
-          signedUrl,
-          onMessage: (message: any) => {
-            console.log('[Agent Message]:', message);
-
-            // Handle text messages from agent
-            if (message.type === 'conversation_initiation_metadata') {
-              console.log('[Agent] Conversation initiated');
-              return;
-            }
-
-            // Extract text from various possible message structures
-            const text = message.message || message.text || '';
-            if (text && message.role === 'agent') {
-              setAccumulatedText(prev => prev + text);
-            }
-          },
-          onError: (error: any) => {
-            console.error('[Agent Error]:', error);
-            setIsAgentEnabled(false);
-          },
-          onDisconnect: () => {
-            console.log('[Agent] Disconnected');
-            setIsAgentEnabled(false);
-          },
-        });
-
-        conversationRef.current = conversation;
-        setIsAgentEnabled(true);
-        console.log('[Agent] Connected (Text-Only)');
-
+        await conversation.startSession({ signedUrl });
+        conversation.setVolume({ volume: 0 }); // Silenciar audio
+        
+        console.log('[Agent] Session started (text-only)');
       } catch (err) {
-        console.error("Failed to initialize text agent:", err);
+        console.error("Failed to connect agent:", err);
         setIsAgentEnabled(false);
       }
     };
 
-    initConversation();
-
-    return () => {
-      if (conversationRef.current) {
-        conversationRef.current.endSession?.();
-      }
-    };
+    const timer = setTimeout(connectAgent, 1000);
+    return () => clearTimeout(timer);
   }, []);
-
-  // Update messages when accumulated text changes
-  useEffect(() => {
-    if (accumulatedText && isStreaming) {
-      setMessages(prev => {
-        const updated = [...prev];
-        if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
-          updated[updated.length - 1] = {
-            role: 'assistant',
-            content: accumulatedText,
-            isStreaming: true,
-          };
-        }
-        return updated;
-      });
-    }
-  }, [accumulatedText, isStreaming]);
 
   const handleSearch = async (query?: string, isCategorySelection: boolean = false) => {
     if (!query) return;
 
-    // Add user message
+    // Agregar mensaje del usuario
     const userMsg: Message = { role: 'user', content: query };
     setMessages(prev => [...prev, userMsg]);
     setHasSearched(true);
     setIsStreaming(true);
-    setAccumulatedText("");
 
-    // Add placeholder for response
+    // Agregar placeholder de "escribiendo..."
     setMessages(prev => [...prev, { role: 'assistant', isStreaming: true }]);
 
-    if (isAgentEnabled && conversationRef.current) {
+    // SOLO modo agente - SIN FALLBACK
+    if (conversation.status === 'connected') {
       try {
-        // Si es una selección de categoría, le damos una instrucción clara al Router
-        const prompt = isCategorySelection
-          ? `Por favor, llévame a la sección de ${query}` 
-          : query;
-
-        await conversationRef.current.sendUserMessage(prompt);
-
-        // Wait a bit for response to accumulate
-        setTimeout(() => {
-          setMessages(prev => {
-            const updated = [...prev];
-            if (updated.length > 0 && updated[updated.length - 1].role === 'assistant') {
-              updated[updated.length - 1] = {
-                ...updated[updated.length - 1],
-                isStreaming: false,
-              };
-            }
-            return updated;
-          });
-          setIsStreaming(false);
-        }, 3000);
-
-      } catch (err: any) {
-        console.error("Agent error:", err);
-        setIsStreaming(false);
-      }
-    } else {
-      // Fallback mode (local simulation)
-      setTimeout(() => {
-        let assistantMsg: Message = { role: 'assistant', isStreaming: true };
-
-        if (query && SIMULATED_ANSWERS[query]) {
-          assistantMsg = {
-            role: 'assistant',
-            directAnswer: SIMULATED_ANSWERS[query],
-            isStreaming: false
-          };
-        } else {
-          const parser = new ScheduleParser(scheduleData);
-          const results = parser.search(query || "");
-          assistantMsg = { role: 'assistant', results: results, isStreaming: false };
+        let prompt = query;
+        
+        // Si es selección de categoría, usar un prompt especial
+        if (isCategorySelection) {
+          prompt = `El usuario seleccionó la categoría: ${query}`;
         }
 
-        setMessages(prev => {
-          const history = prev.slice(0, -1);
-          return [...history, assistantMsg];
-        });
+        console.log('[Enviando al agente]:', prompt);
+        await conversation.sendUserMessage(prompt);
+        
+        // NO usar setTimeout - dejar que el agente responda cuando esté listo
+        
+      } catch (err) {
+        console.error("Agent error:", err);
         setIsStreaming(false);
-      }, 500);
+        
+        // Remover placeholder en caso de error
+        setMessages(prev => prev.slice(0, -1));
+      }
+    } else {
+      // Si no está conectado, mostrar error
+      console.error('[Agent] No conectado');
+      setMessages(prev => {
+        const updated = prev.slice(0, -1); // Remover placeholder
+        return [...updated, {
+          role: 'assistant',
+          content: '⚠️ El agente no está conectado. Por favor recarga la página.',
+          isStreaming: false,
+        }];
+      });
+      setIsStreaming(false);
     }
   };
 
@@ -187,9 +266,19 @@ export default function Home() {
           <SearchHero />
 
           <div className="mb-4 h-6">
-            {isAgentEnabled && (
-              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-100 animate-in fade-in">
-                ● Agente Conectado (Texto)
+            {conversation.status === 'connected' && (
+              <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-100">
+                ● Agente Conectado
+              </span>
+            )}
+            {conversation.status === 'connecting' && (
+              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-100">
+                ○ Conectando...
+              </span>
+            )}
+            {conversation.status === 'disconnected' && (
+              <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-100">
+                ○ Desconectado
               </span>
             )}
           </div>
