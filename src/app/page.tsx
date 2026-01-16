@@ -38,7 +38,6 @@ export default function Home() {
       
       setMessages(prev => {
         const updated = [...prev];
-        // Remover placeholder si existe
         if (updated.length > 0 && updated[updated.length - 1].isStreaming) {
           updated.pop();
         }
@@ -50,7 +49,7 @@ export default function Home() {
       });
       
       setIsStreaming(false);
-      return { success: true };
+      return "success";
     },
 
     displayNewsResults: async ({ news, summary }: { news: any[], summary?: string }) => {
@@ -71,7 +70,7 @@ export default function Home() {
       });
       
       setIsStreaming(false);
-      return { success: true, displayed: news.length };
+      return news.length;
     },
 
     displaySportsResults: async ({ news, summary }: { news: any[], summary?: string }) => {
@@ -92,7 +91,7 @@ export default function Home() {
       });
       
       setIsStreaming(false);
-      return { success: true, displayed: news.length };
+      return news.length;
     },
 
     displaySchedule: async ({ schedule, summary, type }: { schedule: any[], summary?: string, type?: string }) => {
@@ -113,7 +112,7 @@ export default function Home() {
       });
       
       setIsStreaming(false);
-      return { success: true, displayed: schedule.length };
+      return schedule.length;
     },
 
     displayError: async ({ message }: { message: string }) => {
@@ -132,7 +131,7 @@ export default function Home() {
       });
       
       setIsStreaming(false);
-      return { success: true };
+      return message;
     },
   };
 
