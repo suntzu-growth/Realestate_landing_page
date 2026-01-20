@@ -23,19 +23,23 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const updateAssistantMessage = (content: string, streaming: boolean, results?: any[], type?: string) => {
+  const updateAssistantMessage = (content: string, streaming: boolean, results?: any[]) => {
     setMessages(prev => {
       const updated = [...prev];
       const lastIdx = updated.findLastIndex(m => m.role === 'assistant');
+      
       if (lastIdx !== -1) {
+        const lastMessage = updated[lastIdx];
+        
+        // EVITAR DUPLICADOS: Si el 'content' nuevo es igual al que ya hay, o es muy corto/vacío, lo ignoramos
+        const isDuplicate = content?.trim() === lastMessage.content?.trim();
+        const finalContent = (content && !isDuplicate) ? content : lastMessage.content;
+
         updated[lastIdx] = {
-          ...updated[lastIdx],
-          // IMPORTANTE: Si hay contenido nuevo (el detalle), lo usamos
-          content: content || updated[lastIdx].content,
+          ...lastMessage,
+          content: finalContent,
           isStreaming: streaming,
-          // Si hay resultados nuevos (la tarjeta), los añadimos o reemplazamos
-          results: results || updated[lastIdx].results,
-          type: type || 'news'
+          results: results || lastMessage.results
         };
       }
       return updated;
@@ -55,12 +59,10 @@ export default function Home() {
           signedUrl,
           clientTools: {
             displayNewsResults: async ({ news, summary }: any) => {
-              // Si news llega como un objeto único en lugar de array, lo envolvemos
-              const newsArray = Array.isArray(news) ? news : [news];
-              
-              // Forzamos la actualización del mensaje con el texto detallado y la noticia
-              updateAssistantMessage(summary, false, newsArray, 'news');
-              return "Detalles mostrados correctamente";
+              // Si el summary es " " o nulo, pasamos null para que la función mantenga el texto anterior
+              const cleanSummary = (summary && summary.trim().length > 1) ? summary : null;
+              updateAssistantMessage(cleanSummary, false, Array.isArray(news) ? news : [news]);
+              return "Visuales desplegados";
             },
             displayTextResponse: async ({ text }: any) => {
               updateAssistantMessage(text, false);
@@ -97,11 +99,16 @@ export default function Home() {
 
   const handleSearch = async (query: string) => {
     if (!query || agentStatus !== 'connected') return;
+
+    // Si la consulta es solo una palabra (ej: "economia"), enviamos un prompt más claro al agente
+    const processedQuery = query.split(' ').length === 1 ? `Busca noticias de ${query}` : query;
+
     setMessages(prev => [...prev, { role: 'user', content: query }]);
     setHasSearched(true);
     setIsStreaming(true);
     setMessages(prev => [...prev, { role: 'assistant', content: 'Consultando...', isStreaming: true }]);
-    await conversationRef.current.sendUserMessage(query);
+    
+    await conversationRef.current.sendUserMessage(processedQuery);
   };
 
   return (
