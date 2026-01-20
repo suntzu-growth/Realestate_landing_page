@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
         const selectedCategory = validCategories.includes(category) ? category : '';
 
         const baseUrl = 'https://orain.eus/es';
+        const domain = 'https://orain.eus'; // Dominio base para reconstruir URLs
         const url = selectedCategory ? `${baseUrl}/${selectedCategory}` : baseUrl;
 
         console.log('[News] Fetching from:', url);
@@ -46,13 +47,34 @@ export async function POST(request: NextRequest) {
 
             const $article = $(element);
 
-            // Intentar múltiples selectores para el título
+            // Título
             const title = $article.find('h2, h3, h4, .titulo, .title, .headline').first().text().trim() ||
                 $article.find('a').first().attr('title')?.trim() || '';
 
             const summary = $article.find('p, .sumario, .summary, .descripcion, .lead').first().text().trim();
-            const link = $article.find('a').first().attr('href');
-            const image = $article.find('img').first().attr('src') || $article.find('img').first().attr('data-src');
+            
+            // --- CORRECCIÓN DE URL (ELIMINA EL /es/es/) ---
+            const rawLink = $article.find('a').first().attr('href');
+            let cleanUrl = null;
+            if (rawLink) {
+                if (rawLink.startsWith('http')) {
+                    cleanUrl = rawLink;
+                } else {
+                    const normalizedPath = rawLink.startsWith('/') ? rawLink : `/${rawLink}`;
+                    // Si el path ya tiene /es/, no lo volvemos a añadir
+                    cleanUrl = normalizedPath.startsWith('/es') 
+                        ? `${domain}${normalizedPath}` 
+                        : `${domain}/es${normalizedPath}`;
+                }
+            }
+
+            // --- CORRECCIÓN DE IMAGEN ---
+            const rawImage = $article.find('img').first().attr('src') || $article.find('img').first().attr('data-src');
+            let cleanImage = null;
+            if (rawImage) {
+                cleanImage = rawImage.startsWith('http') ? rawImage : `${domain}${rawImage.startsWith('/') ? '' : '/'}${rawImage}`;
+            }
+
             const date = $article.find('time, .fecha, .date, .published').first().text().trim() ||
                 $article.find('time').first().attr('datetime');
 
@@ -60,8 +82,8 @@ export async function POST(request: NextRequest) {
                 news.push({
                     title,
                     summary: summary || 'Sin resumen disponible',
-                    url: link ? (link.startsWith('http') ? link : `${baseUrl}${link}`) : null,
-                    image: image ? (image.startsWith('http') ? image : `${baseUrl}${image}`) : null,
+                    url: cleanUrl,
+                    image: cleanImage,
                     publishedAt: date || 'Hoy',
                     category: selectedCategory || 'general',
                     source: 'Orain.eus'
@@ -69,7 +91,7 @@ export async function POST(request: NextRequest) {
             }
         });
 
-        // Fallback: selectores más generales
+        // Fallback: selectores más generales (Si la primera pasada falla)
         if (news.length === 0) {
             $('.item, .entry, .post, div[class*="noticia"]').each((index, element) => {
                 if (limit && news.length >= limit) return false;
@@ -77,13 +99,19 @@ export async function POST(request: NextRequest) {
                 const $item = $(element);
                 const title = $item.find('h1, h2, h3, h4, h5').first().text().trim();
                 const summary = $item.find('p').first().text().trim();
-                const link = $item.find('a').first().attr('href');
+                const rawLink = $item.find('a').first().attr('href');
+                
+                let cleanUrl = null;
+                if (rawLink) {
+                    const path = rawLink.startsWith('/') ? rawLink : `/${rawLink}`;
+                    cleanUrl = path.startsWith('/es') ? `${domain}${path}` : `${domain}/es${path}`;
+                }
 
                 if (title && title.length > 10) {
                     news.push({
                         title,
                         summary: summary || 'Sin resumen disponible',
-                        url: link ? (link.startsWith('http') ? link : `${baseUrl}${link}`) : null,
+                        url: cleanUrl,
                         image: null,
                         publishedAt: 'Hoy',
                         category: selectedCategory || 'general',
