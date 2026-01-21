@@ -23,7 +23,7 @@ export default function Home() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const updateAssistantMessage = (content: string, streaming: boolean, results?: any[]) => {
+  const updateAssistantMessage = (content: string | null, streaming: boolean, results?: any[]) => {
     setMessages(prev => {
       const updated = [...prev];
       const lastIdx = updated.findLastIndex(m => m.role === 'assistant');
@@ -31,10 +31,8 @@ export default function Home() {
       if (lastIdx !== -1) {
         const lastMessage = updated[lastIdx];
         
-        // Si el content de la herramienta es vacío o un espacio (como pedimos en el prompt),
-        // mantenemos el texto del streaming que ya tiene los números y espacios.
-        const isToolSummaryEmpty = !content || content.trim().length <= 1;
-        const finalContent = isToolSummaryEmpty ? lastMessage.content : content;
+        // Si content es null o vacío, mantener el texto actual
+        const finalContent = content ? content : lastMessage.content;
 
         updated[lastIdx] = {
           ...lastMessage,
@@ -59,13 +57,32 @@ export default function Home() {
         const conversation = await TextConversation.startSession({
           signedUrl,
           clientTools: {
+            // Client Tool para Noticias
             displayNewsResults: async ({ news, summary }: any) => {
-              // Si el summary es " " o nulo, pasamos null para que la función mantenga el texto anterior
+              console.log('[Client Tool] displayNewsResults:', { news, summary });
+              
+              // Si summary es " " o vacío, pasar null para mantener texto actual
               const cleanSummary = (summary && summary.trim().length > 1) ? summary : null;
-              updateAssistantMessage(cleanSummary, false, Array.isArray(news) ? news : [news]);
-              return "Visuales desplegados";
+              const newsArray = Array.isArray(news) ? news : [news];
+              
+              updateAssistantMessage(cleanSummary, false, newsArray);
+              return "Noticias mostradas correctamente";
             },
+            
+            // Client Tool para Deportes
+            displaySportsResults: async ({ news, summary }: any) => {
+              console.log('[Client Tool] displaySportsResults:', { news, summary });
+              
+              const cleanSummary = (summary && summary.trim().length > 1) ? summary : null;
+              const newsArray = Array.isArray(news) ? news : [news];
+              
+              updateAssistantMessage(cleanSummary, false, newsArray);
+              return "Deportes mostrados correctamente";
+            },
+            
+            // Client Tool genérico
             displayTextResponse: async ({ text }: any) => {
+              console.log('[Client Tool] displayTextResponse:', text);
               updateAssistantMessage(text, false);
               return "Texto actualizado";
             }
@@ -74,54 +91,76 @@ export default function Home() {
             const text = message.message || message.text || '';
             if (!text) return;
             
-            // Filtrado de mensajes iniciales repetitivos
-            if (isFirstMessageRef.current && text.toLowerCase().includes("eitb")) return;
+            // Filtrar mensajes iniciales con "EITB" o "Hola! Soy tu Asistente"
+            const lowerText = text.toLowerCase();
+            if (isFirstMessageRef.current && 
+                (lowerText.includes("eitb") || 
+                 lowerText.includes("hola! soy") ||
+                 lowerText.includes("especializado en"))) {
+              console.log('[Agent] Mensaje inicial filtrado:', text);
+              return;
+            }
+            
             isFirstMessageRef.current = false;
 
+            // Streaming de texto
             if (message.role === 'agent' || message.type === 'text') {
-               setMessages(prev => {
-                 const updated = [...prev];
-                 const lastIdx = updated.findLastIndex(m => m.role === 'assistant');
-                 if (lastIdx !== -1) {
-                    const baseContent = updated[lastIdx].content === 'Consultando...' ? '' : updated[lastIdx].content;
-                    updated[lastIdx] = { ...updated[lastIdx], content: baseContent + text, isStreaming: true };
-                 }
-                 return updated;
-               });
+              setMessages(prev => {
+                const updated = [...prev];
+                const lastIdx = updated.findLastIndex(m => m.role === 'assistant');
+                if (lastIdx !== -1) {
+                  const baseContent = updated[lastIdx].content === 'Consultando...' ? '' : updated[lastIdx].content;
+                  updated[lastIdx] = { 
+                    ...updated[lastIdx], 
+                    content: baseContent + text, 
+                    isStreaming: true 
+                  };
+                }
+                return updated;
+              });
             }
           }
         });
+        
         conversationRef.current = conversation;
         setAgentStatus('connected');
-      } catch (e) { setAgentStatus('disconnected'); }
+        console.log('[Agent] Conectado correctamente');
+        
+      } catch (e) { 
+        console.error('[Agent] Error de conexión:', e);
+        setAgentStatus('disconnected'); 
+      }
     };
+    
     initAgent();
   }, []);
 
   const handleSearch = async (query: string, isCategorySelection: boolean = false) => {
     if (!query || agentStatus !== 'connected') return;
 
+    // Resetear flag de primer mensaje al hacer nueva búsqueda
+    isFirstMessageRef.current = true;
+
     let processedQuery = query;
 
-    // CASO ESPECIAL: Si pulsa el botón "Noticias" de la landing
-    if (query.toLowerCase() === "noticias" && !hasSearched) {
-      setHasSearched(true);
-      // Añadimos un mensaje de bienvenida del asistente directamente
-      setMessages([{ role: 'assistant', content: '¡Hola! Soy el asistente de EITB. ¿De qué categoría te gustaría que busquemos noticias hoy?', isStreaming: false }]);
-      // No enviamos mensaje al agente todavía, esperamos a que el usuario responda
-      return;
-    }
-
-    // Si es una categoría específica (desde TopicSelector), ahí sí buscamos
+    // Si viene del TopicSelector, es una categoría
     if (isCategorySelection) {
-      processedQuery = `Busca noticias de ${query}`;
+      processedQuery = `${query}`;
     }
 
+    // Añadir mensaje del usuario
     setMessages(prev => [...prev, { role: 'user', content: query }]);
     setHasSearched(true);
     setIsStreaming(true);
-    setMessages(prev => [...prev, { role: 'assistant', content: 'Consultando...', isStreaming: true }]);
     
+    // Placeholder "Consultando..."
+    setMessages(prev => [...prev, { 
+      role: 'assistant', 
+      content: 'Consultando...', 
+      isStreaming: true 
+    }]);
+    
+    console.log('[User] Enviando query:', processedQuery);
     await conversationRef.current.sendUserMessage(processedQuery);
   };
 
@@ -132,6 +171,26 @@ export default function Home() {
         {!hasSearched ? (
           <div className="max-w-4xl mx-auto flex flex-col items-center pt-12 px-6">
             <SearchHero />
+            
+            {/* Indicador de estado del agente */}
+            <div className="mb-4 h-6">
+              {agentStatus === 'connected' && (
+                <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-100">
+                  ● Agente Conectado
+                </span>
+              )}
+              {agentStatus === 'connecting' && (
+                <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full border border-amber-100 animate-pulse">
+                  ○ Conectando...
+                </span>
+              )}
+              {agentStatus === 'disconnected' && (
+                <span className="text-xs text-red-600 bg-red-50 px-2 py-1 rounded-full border border-red-100">
+                  ○ Desconectado
+                </span>
+              )}
+            </div>
+            
             <QuestionMarquee onQuestionClick={handleSearch} />
             <TopicSelector onSelect={handleSearch} className="mt-8" />
             <div className="w-full mt-10"><SearchInput onSearch={handleSearch} /></div>
@@ -141,7 +200,11 @@ export default function Home() {
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={msg.role === 'user' ? "bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none shadow-md max-w-[80%]" : "w-full"}>
-                  <ResultsStream isStreaming={!!msg.isStreaming} results={msg.results} text={msg.content || ""} />
+                  <ResultsStream 
+                    isStreaming={!!msg.isStreaming} 
+                    results={msg.results} 
+                    text={msg.content || ""} 
+                  />
                 </div>
               </div>
             ))}
