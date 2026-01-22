@@ -18,12 +18,13 @@ export default function Home() {
   const conversationRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isFirstMessageRef = useRef(true);
+  const isToolResponseRef = useRef(false); // Flag para saber si viene de un tool
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const updateAssistantMessage = (content: string | null, streaming: boolean, results?: any[]) => {
+  const updateAssistantMessage = (content: string | null, streaming: boolean, results?: any[], fromTool: boolean = false) => {
     setMessages(prev => {
       const updated = [...prev];
       const lastIdx = updated.findLastIndex(m => m.role === 'assistant');
@@ -31,8 +32,20 @@ export default function Home() {
       if (lastIdx !== -1) {
         const lastMessage = updated[lastIdx];
         
-        // Si content es null o vacío, mantener el texto actual
-        const finalContent = content ? content : lastMessage.content;
+        // Si viene de un Client Tool, REEMPLAZAR completamente el contenido
+        // Si es streaming normal, CONCATENAR
+        let finalContent;
+        if (fromTool) {
+          // Reemplazar completamente
+          finalContent = content || lastMessage.content;
+          isToolResponseRef.current = true;
+        } else if (isToolResponseRef.current) {
+          // Ya tenemos respuesta de tool, no concatenar más
+          finalContent = lastMessage.content;
+        } else {
+          // Streaming normal: mantener o concatenar
+          finalContent = content ? content : lastMessage.content;
+        }
 
         updated[lastIdx] = {
           ...lastMessage,
@@ -61,11 +74,10 @@ export default function Home() {
             displayNewsResults: async ({ news, summary }: any) => {
               console.log('[Client Tool] displayNewsResults:', { news, summary });
               
-              // Si summary es " " o vacío, pasar null para mantener texto actual
               const cleanSummary = (summary && summary.trim().length > 1) ? summary : null;
               const newsArray = Array.isArray(news) ? news : [news];
               
-              updateAssistantMessage(cleanSummary, false, newsArray);
+              updateAssistantMessage(cleanSummary, false, newsArray, true); // fromTool = true
               return "Noticias mostradas correctamente";
             },
             
@@ -76,14 +88,15 @@ export default function Home() {
               const cleanSummary = (summary && summary.trim().length > 1) ? summary : null;
               const newsArray = Array.isArray(news) ? news : [news];
               
-              updateAssistantMessage(cleanSummary, false, newsArray);
+              updateAssistantMessage(cleanSummary, false, newsArray, true); // fromTool = true
               return "Deportes mostrados correctamente";
             },
             
-            // Client Tool genérico
+            // Client Tool genérico - ESTE ES EL IMPORTANTE PARA NOTICIAS
             displayTextResponse: async ({ text }: any) => {
               console.log('[Client Tool] displayTextResponse:', text);
-              updateAssistantMessage(text, false);
+              console.log('[Client Tool] Texto incluye **?:', text.includes('**'));
+              updateAssistantMessage(text, false, undefined, true); // fromTool = true
               return "Texto actualizado";
             }
           },
@@ -103,7 +116,13 @@ export default function Home() {
             
             isFirstMessageRef.current = false;
 
-            // Streaming de texto
+            // NO hacer streaming si ya tenemos respuesta de un Client Tool
+            if (isToolResponseRef.current) {
+              console.log('[Agent] Ignorando streaming, ya hay respuesta de tool');
+              return;
+            }
+
+            // Streaming de texto (solo si NO hay respuesta de tool)
             if (message.role === 'agent' || message.type === 'text') {
               setMessages(prev => {
                 const updated = [...prev];
@@ -138,17 +157,18 @@ export default function Home() {
   const handleSearch = async (query: string, isCategorySelection: boolean = false) => {
     if (!query || agentStatus !== 'connected') return;
 
-    // Resetear flag de primer mensaje al hacer nueva búsqueda
+    // Resetear flags
     isFirstMessageRef.current = true;
+    isToolResponseRef.current = false;
 
     let processedQuery = query;
 
     // Si viene del TopicSelector, es una categoría
     if (isCategorySelection) {
-      processedQuery = `Hablame de las últimas ${query} de la actualidad`;
+      processedQuery = `Háblame de las últimas ${query} de la actualidad`;
     }
 
-    // Añadir mensaje del usuario (mostramos el processedQuery en el chat)
+    // Añadir mensaje del usuario
     setMessages(prev => [...prev, { role: 'user', content: processedQuery }]);
     setHasSearched(true);
     setIsStreaming(true);
