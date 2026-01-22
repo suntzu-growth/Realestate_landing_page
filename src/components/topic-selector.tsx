@@ -3,10 +3,10 @@
 import { cn } from "@/lib/utils";
 
 const TOPICS = [
-    { id: "noticias", label: "📰 Noticias", query: "noticias" },
-    { id: "deportes", label: "⚽ Deportes", query: "deportes" },
-    { id: "television", label: "📺 Television", query: "television" },
-    { id: "radio", label: "📻 Radio", query: "radio" },
+    { id: "noticias", label: "📰 Noticias", query: "noticias", disabled: false },
+    { id: "deportes", label: "⚽ Deportes", query: "deportes", disabled: true },
+    { id: "television", label: "📺 Television", query: "television", disabled: true },
+    { id: "radio", label: "📻 Radio", query: "radio", disabled: true },
 ];
 
 interface TopicSelectorProps {
@@ -20,8 +20,15 @@ export function TopicSelector({ onSelect, className }: TopicSelectorProps) {
             {TOPICS.map((topic) => (
                 <button
                     key={topic.id}
-                    onClick={() => onSelect(topic.query)}
-                    className="px-4 py-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-full text-sm font-medium text-gray-700 hover:border-eitb-blue hover:text-eitb-blue hover:bg-blue-50 transition-all shadow-sm"
+                    onClick={() => !topic.disabled && onSelect(topic.query)}
+                    disabled={topic.disabled}
+                    className={cn(
+                        "px-4 py-2 border rounded-full text-sm font-medium transition-all shadow-sm",
+                        // Estilos para botón habilitado (Noticias)
+                        !topic.disabled && "bg-white/80 backdrop-blur-sm border-gray-200 text-gray-700 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50 cursor-pointer",
+                        // Estilos para botones deshabilitados (Sombreados)
+                        topic.disabled && "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-60 grayscale"
+                    )}
                 >
                     {topic.label}
                 </button>

@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     
     console.log('[get_news] Recibido:', { category, limit });
 
-    const domain = 'https://orain.eus';
+    const domain = 'https://orain.eus/es/actualidad';
     
     // Normalización de categorías (maneja tildes y variaciones)
     const categoryMap: Record<string, string> = {
