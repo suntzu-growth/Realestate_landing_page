@@ -3,8 +3,8 @@
 export function ResultsStream({ isStreaming, results, text }: any) {
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6 animate-in fade-in duration-500">
-      {/* Texto del detalle o listado */}
-      <div className="text-gray-800 text-lg leading-relaxed whitespace-pre-wrap font-sans">
+      {/* CAMBIO: Eliminamos text-gray-800 para que herede el blanco del contenedor del usuario */}
+      <div className="text-inherit text-lg leading-relaxed whitespace-pre-wrap font-sans">
         {text}
         {isStreaming && <span className="inline-block w-2 h-5 ml-1 bg-blue-600 animate-pulse" />}
       </div>

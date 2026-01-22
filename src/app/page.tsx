@@ -145,7 +145,7 @@ export default function Home() {
 
     // Si viene del TopicSelector, es una categoría
     if (isCategorySelection) {
-      processedQuery = `${query}`;
+      processedQuery = `Hablame de las últimas ${query} de la actualidad`;
     }
 
     // Añadir mensaje del usuario
