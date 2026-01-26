@@ -14,65 +14,19 @@ export async function POST(request: NextRequest) {
     console.log('[get_sports_news] Recibido:', { team, limit });
 
     const domain = 'https://kirolakeitb.eus';
+    const baseUrl = `${domain}/es/`;
     
-    // Normalización de equipos
-    const teamMap: Record<string, string> = {
-      // Sin equipo específico
-      '': '',
-      'general': '',
-      'todas': '',
-      'todos': '',
-      
-      // Athletic Club
-      'athletic': 'athletic',
-      'athletic club': 'athletic',
-      'athletic bilbao': 'athletic',
-      'bilbao': 'athletic',
-      'leones': 'athletic',
-      
-      // Real Sociedad
-      'real sociedad': 'real sociedad',
-      'real': 'real sociedad',
-      'la real': 'real sociedad',
-      'donostia': 'real sociedad',
-      'txuri urdin': 'real sociedad',
-      
-      // Alavés
-      'alaves': 'alavés',
-      'alavés': 'alavés',
-      'deportivo alaves': 'alavés',
-      'deportivo alavés': 'alavés',
-      'vitoria': 'alavés',
-      'glorioso': 'alavés',
-      
-      // Eibar
-      'eibar': 'eibar',
-      'sd eibar': 'eibar',
-      
-      // Otros deportes
-      'baskonia': 'baskonia',
-      'basket': 'baloncesto',
-      'baloncesto': 'baloncesto',
-      'ciclismo': 'ciclismo',
-      'pelota': 'pelota vasca'
-    };
-
-    const normalizedTeam = teamMap[team.toLowerCase()] ?? '';
-    
-    console.log('[get_sports_news] Equipo normalizado:', normalizedTeam);
-
-    // URL base de deportes
-    const url = `${domain}/es/`;
-
-    console.log('[get_sports_news] URL:', url);
+    console.log('[get_sports_news] URL:', baseUrl);
 
     // Fetch con timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    const response = await fetch(url, {
+    const response = await fetch(baseUrl, {
       headers: { 
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36' 
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'es-ES,es;q=0.9'
       },
       signal: controller.signal,
       next: { revalidate: 60 }
@@ -87,17 +41,35 @@ export async function POST(request: NextRequest) {
     const html = await response.text();
     const $ = cheerio.load(html);
     
-    // Extraer artículos deportivos
-    let elements = $('article').toArray();
+    // Selectores para noticias deportivas
+    const selectors = [
+      'article.noticia',
+      'article',
+      '.noticia-item',
+      '.news-item',
+      'div[class*="noticia"]'
+    ];
 
-    // Si se especificó un equipo, filtrar
-    if (normalizedTeam) {
+    let elements: any[] = [];
+    
+    for (const selector of selectors) {
+      elements = $(selector).toArray();
+      if (elements.length > 0) {
+        console.log(`[get_sports_news] Usando selector: ${selector} (${elements.length} elementos)`);
+        break;
+      }
+    }
+
+    // Si se especificó equipo, filtrar
+    if (team) {
+      const teamLower = team.toLowerCase();
       elements = elements.filter(el => {
         const $el = $(el);
-        const title = $el.find('h2, h3, h4').text().toLowerCase();
-        const summary = $el.find('p, .sumario').text().toLowerCase();
-        return title.includes(normalizedTeam) || summary.includes(normalizedTeam);
+        const text = $el.text().toLowerCase();
+        return text.includes(teamLower) || 
+               text.includes(normalizeTeamName(teamLower));
       });
+      console.log(`[get_sports_news] Filtrado por equipo "${team}": ${elements.length} elementos`);
     }
 
     // Limitar resultados
@@ -105,19 +77,35 @@ export async function POST(request: NextRequest) {
 
     console.log('[get_sports_news] Artículos encontrados:', elements.length);
 
-    // Procesar noticias deportivas
+    if (elements.length === 0) {
+      console.warn('[get_sports_news] No se encontraron noticias');
+      elements = $('a[href*="/es/"]').filter((_, el) => {
+        const text = $(el).text().trim();
+        return text.length > 20;
+      }).toArray().slice(0, limit);
+      
+      console.log('[get_sports_news] Fallback encontró:', elements.length, 'elementos');
+    }
+
+    // Procesar noticias
     const news = await Promise.all(
       elements.map(async (el) => {
         const $el = $(el);
-        const link = $el.find('a').first().attr('href');
+        
+        let link = $el.is('a') ? $el.attr('href') : $el.find('a').first().attr('href');
         const fullUrl = link?.startsWith('http') ? link : `${domain}${link}`;
 
+        let title = $el.find('h2, h3, h4, .titulo, .title').first().text().trim();
+        if (!title) {
+          title = $el.is('a') ? $el.text().trim() : $el.find('a').first().text().trim();
+        }
+
         let itemData = {
-          title: $el.find('h2, h3, h4').text().trim(),
+          title: title,
           url: fullUrl,
-          summary: $el.find('p, .sumario, .lead').text().trim(),
+          summary: $el.find('p, .sumario, .lead, .descripcion').first().text().trim(),
           image: null as string | null,
-          team: normalizedTeam || detectTeam($el.text())
+          team: detectTeam(title + ' ' + $el.text())
         };
 
         // Obtener detalles
@@ -126,7 +114,10 @@ export async function POST(request: NextRequest) {
           const detailTimeoutId = setTimeout(() => detailController.abort(), 5000);
 
           const detailRes = await fetch(fullUrl, { 
-            headers: { 'User-Agent': 'Mozilla/5.0' },
+            headers: { 
+              'User-Agent': 'Mozilla/5.0',
+              'Accept': 'text/html,application/xhtml+xml'
+            },
             signal: detailController.signal
           });
 
@@ -136,13 +127,22 @@ export async function POST(request: NextRequest) {
             const detailHtml = await detailRes.text();
             const $detail = cheerio.load(detailHtml);
             
-            itemData.image = $detail('meta[property="og:image"]').attr('content') || 
-                            $detail('article img').first().attr('src') || 
-                            null;
+            itemData.image = 
+              $detail('meta[property="og:image"]').attr('content') || 
+              $detail('meta[name="twitter:image"]').attr('content') ||
+              $detail('article img').first().attr('src') || 
+              null;
+            
+            if (itemData.image && !itemData.image.startsWith('http')) {
+              itemData.image = `${domain}${itemData.image}`;
+            }
             
             const ogDesc = $detail('meta[property="og:description"]').attr('content');
-            if (ogDesc && ogDesc.length > itemData.summary.length) {
-              itemData.summary = ogDesc;
+            const twitterDesc = $detail('meta[name="twitter:description"]').attr('content');
+            const bestDesc = ogDesc || twitterDesc;
+            
+            if (bestDesc && bestDesc.length > itemData.summary.length) {
+              itemData.summary = bestDesc;
             }
           }
         } catch (e) {
@@ -153,15 +153,19 @@ export async function POST(request: NextRequest) {
       })
     );
 
-    // Filtrar noticias válidas
-    const validNews = news.filter(n => n.title !== "" && n.title.length > 10);
+    const validNews = news.filter(n => 
+      n.title !== "" && 
+      n.title.length > 10 &&
+      n.url.includes('/es/')
+    );
 
     console.log('[get_sports_news] Noticias válidas:', validNews.length);
 
     return NextResponse.json({ 
       success: true, 
       count: validNews.length,
-      team: normalizedTeam || 'general',
+      team: team || 'general',
+      source: baseUrl,
       news: validNews
     });
 
@@ -176,7 +180,27 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Helper: Detectar equipo en el texto
+// Helper: Normalizar nombres de equipos
+function normalizeTeamName(team: string): string {
+  const teamMap: Record<string, string> = {
+    'athletic': 'athletic club',
+    'athletic club': 'athletic',
+    'bilbao': 'athletic',
+    'real sociedad': 'real',
+    'real': 'real sociedad',
+    'la real': 'real sociedad',
+    'donostia': 'real sociedad',
+    'alaves': 'alavés',
+    'alavés': 'deportivo alavés',
+    'vitoria': 'alavés',
+    'eibar': 'sd eibar',
+    'baskonia': 'baskonia saski'
+  };
+  
+  return teamMap[team] || team;
+}
+
+// Helper: Detectar equipo en texto
 function detectTeam(text: string): string {
   const lowerText = text.toLowerCase();
   

@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const TOPICS = [
     { id: "noticias", label: "📰 Noticias", query: "noticias", disabled: false },
-    { id: "deportes", label: "⚽ Deportes", query: "deportes", disabled: true },
+    { id: "deportes", label: "⚽ Deportes", query: "deportes", disabled: false }, // ✅ HABILITADO
     { id: "television", label: "📺 Television", query: "television", disabled: true },
     { id: "radio", label: "📻 Radio", query: "radio", disabled: true },
 ];
@@ -24,9 +24,9 @@ export function TopicSelector({ onSelect, className }: TopicSelectorProps) {
                     disabled={topic.disabled}
                     className={cn(
                         "px-4 py-2 border rounded-full text-sm font-medium transition-all shadow-sm",
-                        // Estilos para botón habilitado (Noticias)
+                        // Estilos para botón habilitado (Noticias y Deportes)
                         !topic.disabled && "bg-white/80 backdrop-blur-sm border-gray-200 text-gray-700 hover:border-blue-600 hover:text-blue-600 hover:bg-blue-50 cursor-pointer",
-                        // Estilos para botones deshabilitados (Sombreados)
+                        // Estilos para botones deshabilitados (TV y Radio)
                         topic.disabled && "bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed opacity-60 grayscale"
                     )}
                 >

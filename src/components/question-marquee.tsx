@@ -1,22 +1,32 @@
 import { cn } from "@/lib/utils";
 
+// ✅ HABILITADAS: Solo noticias y deportes
 const QUESTIONS_ROW_1 = [
-    "¿Cuándo empieza El Conquis 2025?",
-    "Ver Go!azen temporada 10 online",
-    "¿Qué tiempo hace mañana en Donostia?",
-    "Resultados del Athletic Club ayer",
-    "Programación ETB2 para esta noche",
-    "Escuchar Radio Euskadi en directo",
+    "Últimas noticias de EITB Media", // ✅ Noticias
+    "Resultados del Athletic Club ayer", // ✅ Deportes
+    "¿Qué pasa en el País Vasco?", // ✅ Noticias
+    "¿Cómo va la Real Sociedad?", // ✅ Deportes
+    "Noticias de actualidad", // ✅ Noticias
 ];
 
 const QUESTIONS_ROW_2 = [
-    "Receta de merluza de Karlos Arguiñano",
-    "Últimas noticias de EITB Media",
-    "¿Dónde ver la serie Itxaso?",
-    "Resultados de pelota mano",
-    "Ver teleberri a la carta",
-    "Estrenos de Primeran",
+    "Dame las últimas noticias", // ✅ Noticias
+    "Resultados de pelota mano", // ✅ Deportes
+    "¿Cuándo juega el Alavés?", // ✅ Deportes
+    "Actualidad del País Vasco", // ✅ Noticias
+    "Noticias del Baskonia", // ✅ Deportes
 ];
+
+// ❌ DESHABILITADAS (comentadas):
+// "¿Cuándo empieza El Conquis 2025?" - TV
+// "Ver Go!azen temporada 10 online" - TV
+// "¿Qué tiempo hace mañana en Donostia?" - Fuera de scope
+// "Programación ETB2 para esta noche" - TV
+// "Escuchar Radio Euskadi en directo" - Radio
+// "Receta de merluza de Karlos Arguiñano" - Fuera de scope
+// "¿Dónde ver la serie Itxaso?" - TV
+// "Ver teleberri a la carta" - TV
+// "Estrenos de Primeran" - TV
 
 export function QuestionMarquee({ onQuestionClick }: { onQuestionClick?: (question: string) => void }) {
     return (
