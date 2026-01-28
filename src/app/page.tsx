@@ -18,13 +18,25 @@ export default function Home() {
   const conversationRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isFirstMessageRef = useRef(true);
-  const lastToolCallTimestamp = useRef<number>(0); // ✅ Timestamp del último client tool
+  const lastToolCallTimestamp = useRef<number>(0);
+  const lastContentRef = useRef<string>(''); // ✅ NUEVO: Para detectar duplicados
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const updateAssistantMessage = (content: string | null, streaming: boolean, results?: any[], fromTool: boolean = false) => {
+    // ✅ NUEVO: Ignorar si el contenido es exactamente el mismo que el anterior
+    if (fromTool && content && content === lastContentRef.current) {
+      console.log('[DEBUG] Ignorando client tool duplicado - mismo contenido');
+      return;
+    }
+    
+    // ✅ Actualizar el último contenido procesado
+    if (fromTool && content) {
+      lastContentRef.current = content;
+    }
+    
     setMessages(prev => {
       const updated = [...prev];
       const lastIdx = updated.findLastIndex(m => m.role === 'assistant');
@@ -32,16 +44,11 @@ export default function Home() {
       if (lastIdx !== -1) {
         const lastMessage = updated[lastIdx];
         
-        // ✅ Si viene de un Client Tool, marcar timestamp y reemplazar
-        // ✅ Si es streaming, concatenar
         let finalContent;
         if (fromTool) {
-          // Marcar que acabamos de recibir respuesta de un client tool
           lastToolCallTimestamp.current = Date.now();
-          // Reemplazar completamente con el nuevo contenido del tool
           finalContent = content || lastMessage.content;
         } else {
-          // Streaming normal: concatenar
           const baseContent = lastMessage.content === 'Consultando...' ? '' : lastMessage.content;
           finalContent = content ? baseContent + content : lastMessage.content;
         }
@@ -51,7 +58,7 @@ export default function Home() {
           content: finalContent,
           isStreaming: streaming,
           results: results || lastMessage.results,
-          timestamp: Date.now() // ✅ Key única para React
+          timestamp: Date.now()
         };
       }
       return updated;
@@ -70,33 +77,29 @@ export default function Home() {
         const conversation = await TextConversation.startSession({
           signedUrl,
           clientTools: {
-            // Client Tool para Noticias
             displayNewsResults: async ({ news, summary }: any) => {
               console.log('[Client Tool] displayNewsResults:', { news, summary });
               
               const cleanSummary = (summary && summary.trim().length > 1) ? summary : null;
               const newsArray = Array.isArray(news) ? news : [news];
               
-              updateAssistantMessage(cleanSummary, false, newsArray, true); // fromTool = true
+              updateAssistantMessage(cleanSummary, false, newsArray, true);
               return "Noticias mostradas correctamente";
             },
             
-            // Client Tool para Deportes
             displaySportsResults: async ({ news, summary }: any) => {
               console.log('[Client Tool] displaySportsResults:', { news, summary });
               
               const cleanSummary = (summary && summary.trim().length > 1) ? summary : null;
               const newsArray = Array.isArray(news) ? news : [news];
               
-              updateAssistantMessage(cleanSummary, false, newsArray, true); // fromTool = true
+              updateAssistantMessage(cleanSummary, false, newsArray, true);
               return "Deportes mostrados correctamente";
             },
             
-            // Client Tool genérico - ESTE ES EL IMPORTANTE PARA NOTICIAS
             displayTextResponse: async ({ text }: any) => {
               console.log('[Client Tool] displayTextResponse:', text);
-              console.log('[Client Tool] Texto incluye **?:', text.includes('**'));
-              updateAssistantMessage(text, false, undefined, true); // fromTool = true
+              updateAssistantMessage(text, false, undefined, true);
               return "Texto actualizado";
             }
           },
@@ -104,8 +107,6 @@ export default function Home() {
             const text = message.message || message.text || '';
             if (!text) return;
             
-            // SOLO filtrar el mensaje de bienvenida inicial EXACTO
-            // y SOLO si es el primer mensaje de la sesión
             if (isFirstMessageRef.current && 
                 text === "¡Hola! Soy el asistente de EITB. Por ahora puedo ayudarte con las últimas noticias de actualidad del País Vasco. ¿Qué te gustaría saber?") {
               console.log('[Agent] Mensaje de bienvenida filtrado');
@@ -113,20 +114,16 @@ export default function Home() {
               return;
             }
             
-            // Marcar que ya no es el primer mensaje después del primer onMessage
             if (isFirstMessageRef.current) {
               isFirstMessageRef.current = false;
             }
 
-            // ✅ NUEVO: Ignorar streaming que llega inmediatamente después de un client tool
-            // Esto evita duplicados cuando ElevenLabs envía el mismo texto por ambos canales
             const timeSinceLastTool = Date.now() - lastToolCallTimestamp.current;
-            if (timeSinceLastTool < 500) { // Ventana de 500ms
+            if (timeSinceLastTool < 2000) { // ✅ Aumentado a 2 segundos para textos largos
               console.log('[Agent] Ignorando streaming duplicado (recién vino de client tool)');
               return;
             }
 
-            // Streaming de texto
             if (message.role === 'agent' || message.type === 'text') {
               setMessages(prev => {
                 const updated = [...prev];
@@ -161,14 +158,12 @@ export default function Home() {
   const handleSearch = async (query: string, isCategorySelection: boolean = false) => {
     if (!query || agentStatus !== 'connected') return;
 
-    // Resetear flag del mensaje inicial
     isFirstMessageRef.current = false;
+    lastContentRef.current = ''; // ✅ NUEVO: Resetear al hacer nueva búsqueda
 
     let processedQuery = query;
 
-    // Si viene del TopicSelector, es una categoría
     if (isCategorySelection) {
-      // Mapear categorías a queries apropiadas
       const categoryQueries: Record<string, string> = {
         'noticias': 'Háblame de las últimas noticias de la actualidad',
         'deportes': 'Dame las últimas noticias deportivas',
@@ -179,17 +174,15 @@ export default function Home() {
       processedQuery = categoryQueries[query.toLowerCase()] || query;
     }
 
-    // Añadir mensaje del usuario
     setMessages(prev => [...prev, { role: 'user', content: processedQuery }]);
     setHasSearched(true);
     setIsStreaming(true);
     
-    // Placeholder "Consultando..."
     setMessages(prev => [...prev, { 
       role: 'assistant', 
       content: 'Consultando...', 
       isStreaming: true,
-      timestamp: Date.now() // ✅ Key única para React
+      timestamp: Date.now()
     }]);
     
     console.log('[User] Enviando query:', processedQuery);
@@ -204,7 +197,6 @@ export default function Home() {
           <div className="max-w-4xl mx-auto flex flex-col items-center pt-12 px-6">
             <SearchHero />
             
-            {/* Indicador de estado del agente */}
             <div className="mb-4 h-6">
               {agentStatus === 'connected' && (
                 <span className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-100">
