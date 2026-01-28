@@ -18,7 +18,7 @@ export default function Home() {
   const conversationRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isFirstMessageRef = useRef(true);
-  // ✅ ELIMINADO: isToolResponseRef - ya no es necesario
+  const lastToolCallTimestamp = useRef<number>(0); // ✅ Timestamp del último client tool
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,10 +32,12 @@ export default function Home() {
       if (lastIdx !== -1) {
         const lastMessage = updated[lastIdx];
         
-        // ✅ Si viene de un Client Tool, SIEMPRE reemplazar
+        // ✅ Si viene de un Client Tool, marcar timestamp y reemplazar
         // ✅ Si es streaming, concatenar
         let finalContent;
         if (fromTool) {
+          // Marcar que acabamos de recibir respuesta de un client tool
+          lastToolCallTimestamp.current = Date.now();
           // Reemplazar completamente con el nuevo contenido del tool
           finalContent = content || lastMessage.content;
         } else {
@@ -115,8 +117,13 @@ export default function Home() {
               isFirstMessageRef.current = false;
             }
 
-            // ✅ ELIMINADO: La lógica que bloqueaba streaming después de tool response
-            // Ahora permitimos que onMessage y displayTextResponse coexistan
+            // ✅ NUEVO: Ignorar streaming que llega inmediatamente después de un client tool
+            // Esto evita duplicados cuando ElevenLabs envía el mismo texto por ambos canales
+            const timeSinceLastTool = Date.now() - lastToolCallTimestamp.current;
+            if (timeSinceLastTool < 500) { // Ventana de 500ms
+              console.log('[Agent] Ignorando streaming duplicado (recién vino de client tool)');
+              return;
+            }
 
             // Streaming de texto
             if (message.role === 'agent' || message.type === 'text') {
