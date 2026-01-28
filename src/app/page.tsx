@@ -18,7 +18,7 @@ export default function Home() {
   const conversationRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isFirstMessageRef = useRef(true);
-  const isToolResponseRef = useRef(false); // Flag para saber si viene de un tool
+  // ✅ ELIMINADO: isToolResponseRef - ya no es necesario
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -32,19 +32,16 @@ export default function Home() {
       if (lastIdx !== -1) {
         const lastMessage = updated[lastIdx];
         
-        // Si viene de un Client Tool, REEMPLAZAR completamente el contenido
-        // Si es streaming normal, CONCATENAR
+        // ✅ Si viene de un Client Tool, SIEMPRE reemplazar
+        // ✅ Si es streaming, concatenar
         let finalContent;
         if (fromTool) {
-          // Reemplazar completamente
+          // Reemplazar completamente con el nuevo contenido del tool
           finalContent = content || lastMessage.content;
-          isToolResponseRef.current = true;
-        } else if (isToolResponseRef.current) {
-          // Ya tenemos respuesta de tool, no concatenar más
-          finalContent = lastMessage.content;
         } else {
-          // Streaming normal: mantener o concatenar
-          finalContent = content ? content : lastMessage.content;
+          // Streaming normal: concatenar
+          const baseContent = lastMessage.content === 'Consultando...' ? '' : lastMessage.content;
+          finalContent = content ? baseContent + content : lastMessage.content;
         }
 
         updated[lastIdx] = {
@@ -118,13 +115,10 @@ export default function Home() {
               isFirstMessageRef.current = false;
             }
 
-            // NO hacer streaming si ya tenemos respuesta de un Client Tool
-            if (isToolResponseRef.current) {
-              console.log('[Agent] Ignorando streaming, ya hay respuesta de tool');
-              return;
-            }
+            // ✅ ELIMINADO: La lógica que bloqueaba streaming después de tool response
+            // Ahora permitimos que onMessage y displayTextResponse coexistan
 
-            // Streaming de texto (solo si NO hay respuesta de tool)
+            // Streaming de texto
             if (message.role === 'agent' || message.type === 'text') {
               setMessages(prev => {
                 const updated = [...prev];
@@ -159,9 +153,8 @@ export default function Home() {
   const handleSearch = async (query: string, isCategorySelection: boolean = false) => {
     if (!query || agentStatus !== 'connected') return;
 
-    // Resetear flags
+    // Resetear flag del mensaje inicial
     isFirstMessageRef.current = false;
-    isToolResponseRef.current = false;
 
     let processedQuery = query;
 
