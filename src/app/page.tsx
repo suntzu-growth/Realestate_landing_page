@@ -105,6 +105,23 @@ export default function Home() {
               console.log('[Client Tool] displayTextResponse:', text);
               updateAssistantMessage(text, false, undefined, true);
               return "Texto actualizado";
+            },
+
+            saveUserData: async ({ name, email }: any) => {
+              console.log('[Client Tool] saveUserData:', { name, email });
+              try {
+                const res = await fetch("/api/tools/save-user-data", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name, email })
+                });
+                const data = await res.json();
+                console.log('[Client Tool] saveUserData Response:', data);
+                return "Datos guardados en el sheet (simulado)";
+              } catch (e) {
+                console.error('[Client Tool] Error saving data:', e);
+                return "Error al guardar datos";
+              }
             }
           },
           onMessage: (message: any) => {
