@@ -5,182 +5,98 @@ import * as cheerio from 'cheerio';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    let { team, limit } = body;
+    let { team, limit = 10 } = body; // Mantenemos tu flexibilidad de límite
     
-    // Defaults
-    limit = limit || 5;
-    team = team || '';
-    
-    console.log('[get_sports_news] Recibido:', { team, limit });
-
     const domain = 'https://kirolakeitb.eus';
     const baseUrl = `${domain}/es/`;
     
-    console.log('[get_sports_news] URL:', baseUrl);
-
-    // Fetch con timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
+    // 1. Petición única a la portada (Caché de 5 min para ser "invisible")
+    // Aumentamos revalidate de 60 a 300 para mayor seguridad en producción
     const response = await fetch(baseUrl, {
       headers: { 
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'es-ES,es;q=0.9'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36'
       },
-      signal: controller.signal,
-      next: { revalidate: 60 }
+      next: { revalidate: 300 } 
     });
 
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
     const html = await response.text();
     const $ = cheerio.load(html);
     
-    // Selectores para noticias deportivas
-    const selectors = [
-      'article.noticia',
-      'article',
-      '.noticia-item',
-      '.news-item',
-      'div[class*="noticia"]'
-    ];
+    // 2. Mapeo instantáneo de TODA la lista de la portada
+    let allNews = $('article, .noticia, .li_submenu').map((_, el) => {
+      const $el = $(el);
+      let link = $el.is('a') ? $el.attr('href') : $el.find('a').first().attr('href');
+      const title = $el.find('h2, h3, h4, .titulo').first().text().trim() || $el.text().slice(0, 60).trim();
+      
+      return {
+        title,
+        url: link?.startsWith('http') ? link : `${domain}${link}`,
+        summaryFromList: $el.find('p, .sumario, .lead').first().text().trim()
+      };
+    }).get();
 
-    let elements: any[] = [];
-    
-    for (const selector of selectors) {
-      elements = $(selector).toArray();
-      if (elements.length > 0) {
-        console.log(`[get_sports_news] Usando selector: ${selector} (${elements.length} elementos)`);
-        break;
-      }
-    }
-
-    // Si se especificó equipo, filtrar
+    // 3. Filtrado por equipo (usando tus funciones helper)
     if (team) {
       const teamLower = team.toLowerCase();
-      elements = elements.filter(el => {
-        const $el = $(el);
-        const text = $el.text().toLowerCase();
-        return text.includes(teamLower) || 
-               text.includes(normalizeTeamName(teamLower));
-      });
-      console.log(`[get_sports_news] Filtrado por equipo "${team}": ${elements.length} elementos`);
+      const normTeam = normalizeTeamName(teamLower);
+      allNews = allNews.filter(n => 
+        n.title.toLowerCase().includes(teamLower) || 
+        n.title.toLowerCase().includes(normTeam)
+      );
     }
 
-    // Limitar resultados
-    elements = elements.slice(0, Math.min(limit, 10));
+    const selectedNews = allNews.slice(0, limit);
 
-    console.log('[get_sports_news] Artículos encontrados:', elements.length);
-
-    if (elements.length === 0) {
-      console.warn('[get_sports_news] No se encontraron noticias');
-      elements = $('a[href*="/es/"]').filter((_, el) => {
-        const text = $(el).text().trim();
-        return text.length > 20;
-      }).toArray().slice(0, limit);
-      
-      console.log('[get_sports_news] Fallback encontró:', elements.length, 'elementos');
-    }
-
-    // Procesar noticias
+    // 4. PARALELISMO TOTAL (Rápido y eficiente)
+    // Procesamos todas las noticias (hasta 10) simultáneamente
     const news = await Promise.all(
-      elements.map(async (el) => {
-        const $el = $(el);
-        
-        let link = $el.is('a') ? $el.attr('href') : $el.find('a').first().attr('href');
-        const fullUrl = link?.startsWith('http') ? link : `${domain}${link}`;
-
-        let title = $el.find('h2, h3, h4, .titulo, .title').first().text().trim();
-        if (!title) {
-          title = $el.is('a') ? $el.text().trim() : $el.find('a').first().text().trim();
-        }
-
-        let itemData = {
-          title: title,
-          url: fullUrl,
-          summary: $el.find('p, .sumario, .lead, .descripcion').first().text().trim(),
-          image: null as string | null,
-          team: detectTeam(title + ' ' + $el.text())
-        };
-
-        // Obtener detalles
+      selectedNews.map(async (newsItem) => {
         try {
-          const detailController = new AbortController();
-          const detailTimeoutId = setTimeout(() => detailController.abort(), 5000);
-
-          const detailRes = await fetch(fullUrl, { 
-            headers: { 
-              'User-Agent': 'Mozilla/5.0',
-              'Accept': 'text/html,application/xhtml+xml'
-            },
-            signal: detailController.signal
+          // Timeout individual corto (2.5s) para que una noticia lenta no frene todo
+          const detailRes = await fetch(newsItem.url, { 
+            signal: AbortSignal.timeout(2500),
+            next: { revalidate: 3600 } 
           });
 
-          clearTimeout(detailTimeoutId);
+          if (!detailRes.ok) throw new Error();
 
-          if (detailRes.ok) {
-            const detailHtml = await detailRes.text();
-            const $detail = cheerio.load(detailHtml);
-            
-            itemData.image = 
-              $detail('meta[property="og:image"]').attr('content') || 
-              $detail('meta[name="twitter:image"]').attr('content') ||
-              $detail('article img').first().attr('src') || 
-              null;
-            
-            if (itemData.image && !itemData.image.startsWith('http')) {
-              itemData.image = `${domain}${itemData.image}`;
-            }
-            
-            const ogDesc = $detail('meta[property="og:description"]').attr('content');
-            const twitterDesc = $detail('meta[name="twitter:description"]').attr('content');
-            const bestDesc = ogDesc || twitterDesc;
-            
-            if (bestDesc && bestDesc.length > itemData.summary.length) {
-              itemData.summary = bestDesc;
-            }
-          }
+          const detailHtml = await detailRes.text();
+          const $detail = cheerio.load(detailHtml);
+          
+          return {
+            title: newsItem.title,
+            url: newsItem.url,
+            summary: $detail('meta[property="og:description"]').attr('content') || newsItem.summaryFromList || "Detalles en la web.",
+            image: $detail('meta[property="og:image"]').attr('content') || null,
+            team: detectTeam(newsItem.title)
+          };
         } catch (e) {
-          console.warn('[get_sports_news] Error obteniendo detalles de:', fullUrl);
+          // Fallback: Si el detalle falla, enviamos lo que ya tenemos de la portada
+          return {
+            title: newsItem.title,
+            url: newsItem.url,
+            summary: newsItem.summaryFromList || "Consulta la noticia en Kirolak EITB.",
+            image: null,
+            team: detectTeam(newsItem.title)
+          };
         }
-
-        return itemData;
       })
     );
 
-    const validNews = news.filter(n => 
-      n.title !== "" && 
-      n.title.length > 10 &&
-      n.url.includes('/es/')
-    );
-
-    console.log('[get_sports_news] Noticias válidas:', validNews.length);
-
     return NextResponse.json({ 
       success: true, 
-      count: validNews.length,
-      team: team || 'general',
-      source: baseUrl,
-      news: validNews
+      count: news.length,
+      news: news.filter(n => n.title.length > 5) 
     });
 
   } catch (error: any) {
-    console.error('[get_sports_news] Error:', error.message);
-    
-    return NextResponse.json({ 
-      success: false, 
-      error: error.message,
-      news: []
-    }, { status: 500 });
+    return NextResponse.json({ success: false, news: [] }, { status: 500 });
   }
 }
 
-// Helper: Normalizar nombres de equipos
+// Helper: Normalizar nombres de equipos (Mantenemos tu lógica exacta)
 function normalizeTeamName(team: string): string {
   const teamMap: Record<string, string> = {
     'athletic': 'athletic club',
@@ -196,19 +112,16 @@ function normalizeTeamName(team: string): string {
     'eibar': 'sd eibar',
     'baskonia': 'baskonia saski'
   };
-  
   return teamMap[team] || team;
 }
 
-// Helper: Detectar equipo en texto
+// Helper: Detectar equipo en texto (Mantenemos tu lógica exacta)
 function detectTeam(text: string): string {
   const lowerText = text.toLowerCase();
-  
   if (lowerText.includes('athletic')) return 'Athletic Club';
   if (lowerText.includes('real sociedad') || lowerText.includes('la real')) return 'Real Sociedad';
   if (lowerText.includes('alavés') || lowerText.includes('alaves')) return 'Deportivo Alavés';
   if (lowerText.includes('eibar')) return 'SD Eibar';
   if (lowerText.includes('baskonia')) return 'Baskonia';
-  
   return 'General';
 }
