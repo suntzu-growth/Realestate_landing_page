@@ -14,8 +14,8 @@ const merriweather = Merriweather({
 });
 
 export const metadata: Metadata = {
-  title: "Ainhoa: Zure EITB gida",
-  description: "Your guide to EITB content",
+  title: "Suntzu: Realestate AI Assistant",
+  description: "Tu asistente de IA para encontrar la casa ideal con Suntzu Realestate.",
 };
 
 export default function RootLayout({

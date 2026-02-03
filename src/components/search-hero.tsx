@@ -7,7 +7,7 @@ export function SearchHero() {
                 Encuentra tu casa ideal.
             </h1>
             <p className="text-sm md:text-base text-gray-500 font-sans max-w-xl mx-auto leading-relaxed px-4">
-                Esto es un <span className="font-bold text-gray-700">experimento</span> de Vivla para usar IA y responder tus dudas sobre nuestras propiedades y servicios. Las respuestas se basan en información pública de Vivla.
+                Esto es un <span className="font-bold text-gray-700">experimento</span> de Suntzu Realestate para demostrar las capacidades de un asistente de IA en el sector inmobiliario.
             </p>
         </div>
     );
