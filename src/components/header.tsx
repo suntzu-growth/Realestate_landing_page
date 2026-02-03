@@ -54,8 +54,8 @@ export function Header({ conversationId }: { conversationId?: string }) {
                     >
                         <div className="relative w-24 h-8">
                             <img
-                                src="/eitb-logo.png"
-                                alt="EITB - Volver al inicio"
+                                src="/suntzu_logo.svg"
+                                alt="Suntzu - Volver al inicio"
                                 className="object-contain w-full h-full"
                             />
                         </div>
@@ -93,7 +93,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                         </div>
 
                         <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-                            {isSuccess ? "¡Bienvenido a EITB!" : "Personaliza tu experiencia"}
+                            {isSuccess ? "¡Bienvenido a Vivla!" : "Personaliza tu experiencia"}
                         </h2>
 
                         {isSuccess ? (
@@ -104,7 +104,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                                     </svg>
                                 </div>
                                 <p className="text-gray-600 mb-6">
-                                    Eskerrik asko, <strong>{formData.name}</strong>. Tus datos han sido guardados correctamente. Te avisaremos pronto con las mejores noticias.
+                                    Gracias por elegirnos, <strong>{formData.name}</strong>. Tus datos han sido guardados correctamente. Te avisaremos pronto con las mejores oportunidades.
                                 </p>
                                 <button
                                     onClick={() => setShowModal(false)}
@@ -168,7 +168,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                         )}
 
                         <p className="text-xs text-gray-500 mt-4 text-center">
-                            Eskerrik asko por tu interés en EITB 🙏
+                            Gracias por tu interés en Vivla 🙏
                         </p>
                     </div>
                 </div>

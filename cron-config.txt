@@ -1,0 +1,60 @@
+# CONFIGURACIÓN DE CRON JOBS PARA SCRAPING DIARIO
+
+## Opción 1: Vercel Cron Jobs (Recomendado si usas Vercel)
+Añade esto a tu archivo `vercel.json` en la raíz:
+
+```json
+{
+  "crons": [
+    {
+      "path": "/api/scraping/daily",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}
+```
+*Nota: Esto ejecutará el scraping cada día a las 8:00 AM UTC.*
+
+## Opción 2: GitHub Actions (Gratis)
+Crea un archivo `.github/workflows/daily-scrape.yml`:
+
+```yaml
+name: Daily Scraping
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v2
+        with:
+          node-version: '18'
+      - run: npm install
+      - run: node run-scraper.js
+      - name: Commit data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/scraping/
+          git commit -m "Update scraping data" || exit 0
+          git push
+```
+
+## Opción 3: Local Cron (Linux/Mac)
+Ejecuta `crontab -e` y añade:
+
+```bash
+0 8 * * * cd /ruta/a/tu/proyecto && /usr/local/bin/node run-scraper.js >> /ruta/a/logs/scrape.log 2>&1
+```
+
+## Opción 4: Windows Task Scheduler
+1. Abre "Programador de tareas".
+2. Crea una tarea básica.
+3. Programa: Diariamente.
+4. Acción: Iniciar un programa.
+5. Programa: `node`.
+6. Argumentos: `C:\ruta\a\tu\proyecto\run-scraper.js`.

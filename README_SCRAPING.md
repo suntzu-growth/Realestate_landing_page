@@ -5,21 +5,15 @@ Este proyecto incluye ahora un sistema avanzado de scraping diario y preparació
 ## 🚀 Inicio Rápido
 
 ### Scraping Manual
-Para obtener todas las noticias actuales inmediatamente y compartirlas:
+Para obtener todas las noticias actuales inmediatamente:
 ```bash
 node scrape-ahora.js
 ```
 
 ### Preparación para RAG
-Para transformar los datos en formatos listos para IA (LangChain, VectorDB, CSV):
+Para transformar los datos en formatos listos para IA:
 ```bash
 node prepare-for-rag.js
-```
-
-### Generación de Reporte PDF
-Para crear un PDF profesional con las noticias:
-```bash
-node json-to-pdf.js
 ```
 
 ## 📁 Estructura de Archivos del Sistema
@@ -27,13 +21,11 @@ node json-to-pdf.js
 | Archivo | Descripción |
 |---------|-------------|
 | `run-scraper.js` | Script principal de scraping (Orain + Kirolak) |
-| `scrape-ahora.js` | Script de ejecución rápida "todo-en-uno" |
+| `scrape-ahora.js` | Script de ejecución rápida |
 | `prepare-for-rag.js` | Conversor de datos a formatos LangChain, CSV, etc. |
-| `json-to-pdf.js` | Generador de reportes en PDF para humanos |
+| `json-to-pdf.js` | Generador de reportes en PDF |
 | `scraper-completo.ts` | Clase TypeScript reutilizable para el API |
 | `src/app/api/scraping/daily/route.ts` | Endpoint para automatización diaria |
-| `GUIA-RAPIDA-SCRAPING.md` | Instrucciones paso a paso para el equipo |
-| `INTEGRACION.md` | Guía técnica para conectar con el Agente |
 
 ## 📊 Datos Generados
 Los datos se guardan en la carpeta `./data/`:
@@ -46,14 +38,5 @@ Asegúrate de tener instaladas las librerías necesarias:
 npm install cheerio jspdf jspdf-autotable
 ```
 
----
-
-## 🚀 Getting Started (Next.js)
-
-First, run the development server:
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🤖 Integración con el Agente
+Consulta el archivo `INTEGRACION.md` para ver cómo conectar esta base de datos con tus herramientas de ElevenLabs.
