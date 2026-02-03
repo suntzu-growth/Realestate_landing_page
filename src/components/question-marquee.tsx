@@ -2,31 +2,20 @@ import { cn } from "@/lib/utils";
 
 // ✅ HABILITADAS: Solo noticias y deportes
 const QUESTIONS_ROW_1 = [
-    "Últimas noticias de EITB Media", // ✅ Noticias
-    "Resultados del Athletic Club ayer", // ✅ Deportes
-    "¿Qué pasa en el País Vasco?", // ✅ Noticias
-    "¿Cómo va la Real Sociedad?", // ✅ Deportes
-    "Noticias de actualidad", // ✅ Noticias
+    "Casas de lujo en Menorca",
+    "Áticos en Madrid con terraza",
+    "Viviendas cerca de la playa",
+    "Propiedades en el campo",
+    "Inversiones inmobiliarias rentables",
 ];
 
 const QUESTIONS_ROW_2 = [
-    "Dame las últimas noticias", // ✅ Noticias
-    "Resultados de pelota mano", // ✅ Deportes
-    "¿Cuándo juega el Alavés?", // ✅ Deportes
-    "Actualidad del País Vasco", // ✅ Noticias
-    "Noticias del Baskonia", // ✅ Deportes
+    "Casas con piscina privada",
+    "Oportunidades en Ibiza",
+    "Chalets en la montaña",
+    "Propiedades exclusivas en preventa",
+    "Villas de diseño contemporáneo",
 ];
-
-// ❌ DESHABILITADAS (comentadas):
-// "¿Cuándo empieza El Conquis 2025?" - TV
-// "Ver Go!azen temporada 10 online" - TV
-// "¿Qué tiempo hace mañana en Donostia?" - Fuera de scope
-// "Programación ETB2 para esta noche" - TV
-// "Escuchar Radio Euskadi en directo" - Radio
-// "Receta de merluza de Karlos Arguiñano" - Fuera de scope
-// "¿Dónde ver la serie Itxaso?" - TV
-// "Ver teleberri a la carta" - TV
-// "Estrenos de Primeran" - TV
 
 export function QuestionMarquee({ onQuestionClick }: { onQuestionClick?: (question: string) => void }) {
     return (
@@ -41,7 +30,7 @@ export function QuestionMarquee({ onQuestionClick }: { onQuestionClick?: (questi
                     <div
                         key={i}
                         onClick={() => onQuestionClick?.(q)}
-                        className="flex items-center px-6 py-3 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm text-gray-600 font-medium whitespace-nowrap text-sm md:text-base cursor-pointer hover:bg-white hover:shadow-md hover:text-eitb-blue transition-all pointer-events-auto active:scale-95"
+                        className="flex items-center px-6 py-3 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm text-gray-600 font-medium whitespace-nowrap text-sm md:text-base cursor-pointer hover:bg-white hover:shadow-md hover:text-red-600 transition-all pointer-events-auto active:scale-95"
                     >
                         {q}
                     </div>
@@ -54,7 +43,7 @@ export function QuestionMarquee({ onQuestionClick }: { onQuestionClick?: (questi
                     <div
                         key={i}
                         onClick={() => onQuestionClick?.(q)}
-                        className="flex items-center px-6 py-3 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm text-gray-600 font-medium whitespace-nowrap text-sm md:text-base cursor-pointer hover:bg-white hover:shadow-md hover:text-eitb-blue transition-all pointer-events-auto active:scale-95"
+                        className="flex items-center px-6 py-3 bg-gray-50 rounded-2xl border border-gray-100 shadow-sm text-gray-600 font-medium whitespace-nowrap text-sm md:text-base cursor-pointer hover:bg-white hover:shadow-md hover:text-red-600 transition-all pointer-events-auto active:scale-95"
                     >
                         {q}
                     </div>

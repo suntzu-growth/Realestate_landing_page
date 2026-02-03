@@ -52,7 +52,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                         onClick={handleLogoClick}
                         className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity"
                     >
-                        <div className="relative w-24 h-8">
+                        <div className="relative w-32 h-10">
                             <img
                                 src="/suntzu_logo.svg"
                                 alt="Suntzu - Volver al inicio"
@@ -65,7 +65,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                     <div className="flex items-center space-x-4">
                         <button
                             onClick={handleCreateAccount}
-                            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
                         >
                             Crear cuenta
                         </button>
@@ -85,8 +85,8 @@ export function Header({ conversationId }: { conversationId?: string }) {
                     >
                         {/* Icono de personalización */}
                         <div className="flex justify-center mb-4">
-                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                                <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                                 </svg>
                             </div>
@@ -108,7 +108,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                                 </p>
                                 <button
                                     onClick={() => setShowModal(false)}
-                                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                                    className="w-full bg-red-600 text-white py-3 rounded-lg hover:bg-red-700 transition-colors font-medium"
                                 >
                                     Cerrar
                                 </button>
@@ -126,7 +126,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                                             required
                                             type="text"
                                             placeholder="Tu nombre"
-                                            className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none transition-all"
                                             value={formData.name}
                                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                         />
@@ -137,7 +137,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                                             required
                                             type="email"
                                             placeholder="ejemplo@email.com"
-                                            className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+                                            className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-gray-50 focus:bg-white focus:ring-2 focus:ring-red-500 outline-none transition-all"
                                             value={formData.email}
                                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                         />
@@ -145,7 +145,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                                     <button
                                         type="submit"
                                         disabled={isSubmitting}
-                                        className="w-full bg-blue-600 text-white py-4 rounded-xl hover:bg-blue-700 transition-all font-bold shadow-lg shadow-blue-200 disabled:opacity-50 disabled:shadow-none mt-2"
+                                        className="w-full bg-red-600 text-white py-4 rounded-xl hover:bg-red-700 transition-all font-bold shadow-lg shadow-red-200 disabled:opacity-50 disabled:shadow-none mt-2"
                                     >
                                         {isSubmitting ? "Guardando..." : "¡Quiero mi cuenta!"}
                                     </button>
@@ -155,11 +155,11 @@ export function Header({ conversationId }: { conversationId?: string }) {
                                     <p className="text-[10px] text-gray-400 uppercase tracking-widest text-center mb-4">Próximamente disponible</p>
                                     <ul className="grid grid-cols-2 gap-3">
                                         <li className="flex items-center gap-2 text-[11px] text-gray-500">
-                                            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full"></span>
                                             Noticias a medida
                                         </li>
                                         <li className="flex items-center gap-2 text-[11px] text-gray-500">
-                                            <span className="w-1.5 h-1.5 bg-blue-400 rounded-full"></span>
+                                            <span className="w-1.5 h-1.5 bg-red-400 rounded-full"></span>
                                             Alertas de goles
                                         </li>
                                     </ul>

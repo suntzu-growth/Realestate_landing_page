@@ -29,13 +29,13 @@ export function SearchInput({ onSearch }: SearchInputProps) {
     return (
         <div className="relative w-full max-w-2xl mx-auto group animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300">
             <div className="relative bg-white rounded-full shadow-lg border border-gray-200 flex items-center p-2 hover:shadow-xl transition-shadow duration-300 ring-1 ring-gray-100">
-                <Search 
-                    className="w-5 h-5 text-gray-400 ml-4 cursor-pointer hover:text-eitb-blue transition-colors" 
-                    onClick={handleSearchClick} 
+                <Search
+                    className="w-5 h-5 text-gray-400 ml-4 cursor-pointer hover:text-red-600 transition-colors"
+                    onClick={handleSearchClick}
                 />
                 <Input
                     type="text"
-                    placeholder="Pregunta algo sobre EITB..."
+                    placeholder="Pregunta algo sobre Vivla..."
                     className="border-none shadow-none focus-visible:ring-0 text-lg py-6 px-4 bg-transparent flex-1 placeholder:text-gray-400"
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}

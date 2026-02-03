@@ -4,7 +4,7 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --color-eitb-blue: #0484cd;
+  --color-vivla-red: #e63946;
   --font-sans: var(--font-inter);
   --font-serif: var(--font-merriweather);
   --color-background: var(--background);

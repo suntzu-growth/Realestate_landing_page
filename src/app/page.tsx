@@ -144,7 +144,7 @@ export default function Home() {
             // bloqueamos el streaming de este turno para que no se pegue al final.
             if (receivedToolTextRef.current && message.role === 'agent') {
               console.log('[Agent] Bloqueando duplicado de streaming (Auto pre-speech)');
-              return; 
+              return;
             }
 
             // 3. Mantenemos tu filtro de seguridad por tiempo
@@ -190,7 +190,7 @@ export default function Home() {
     if (!query || agentStatus !== 'connected') return;
 
     // RESETEAR AQUÍ
-    receivedToolTextRef.current = false; 
+    receivedToolTextRef.current = false;
     lastContentRef.current = '';
     isFirstMessageRef.current = false;
 
@@ -256,7 +256,7 @@ export default function Home() {
           <div className="max-w-3xl mx-auto px-6 pb-40 space-y-10 pt-10 animate-in fade-in duration-500">
             {messages.map((msg, i) => (
               <div key={`msg-${i}-${msg.timestamp || i}`} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={msg.role === 'user' ? "bg-blue-600 text-white p-4 rounded-2xl rounded-tr-none shadow-md max-w-[80%]" : "w-full"}>
+                <div className={msg.role === 'user' ? "bg-red-600 text-white p-4 rounded-2xl rounded-tr-none shadow-md max-w-[80%]" : "w-full"}>
                   <ResultsStream
                     key={`stream-${i}-${msg.timestamp || i}`}
                     isStreaming={!!msg.isStreaming}

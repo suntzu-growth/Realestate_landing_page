@@ -27,7 +27,7 @@ export function MediaCard({
                     className="object-cover w-full h-full hover:scale-105 transition-transform duration-500"
                 />
                 <div className="absolute top-2 left-2">
-                    <Badge className="bg-eitb-blue hover:bg-sky-600 text-white border-none backdrop-blur-sm">
+                    <Badge className="bg-red-600 hover:bg-red-700 text-white border-none backdrop-blur-sm">
                         {category}
                     </Badge>
                 </div>
@@ -36,7 +36,7 @@ export function MediaCard({
                 <h3 className="font-serif font-bold text-xl text-gray-900">{title}</h3>
                 <Button
                     asChild
-                    className="w-full bg-eitb-blue hover:bg-sky-600 text-white font-medium group"
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-medium group"
                 >
                     <Link href={link}>
                         <Play className="w-4 h-4 mr-2 fill-current" />

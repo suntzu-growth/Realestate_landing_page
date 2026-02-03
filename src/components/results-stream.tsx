@@ -10,7 +10,7 @@ function parseMarkdown(text: string): string {
     // Negritas: **texto** → <strong>texto</strong>
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     // Enlaces: [texto](url) → <a href="url">texto</a>
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" class="text-blue-600 hover:underline">$1</a>')
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" class="text-red-600 hover:underline">$1</a>')
     // Emojis de enlaces: 🔗 → mantener
     .replace(/🔗/g, '🔗');
 }
@@ -99,7 +99,7 @@ export function ResultsStream({ isStreaming, results, text }: any) {
 
       {/* Cursor parpadeante mientras escribe */}
       {(isStreaming || isTyping) && (
-        <span className="inline-block w-2 h-5 ml-1 bg-blue-600 animate-pulse" />
+        <span className="inline-block w-2 h-5 ml-1 bg-red-600 animate-pulse" />
       )}
 
       {/* Tarjetas Visuales (Metadata + Link) */}
@@ -128,10 +128,10 @@ export function ResultsStream({ isStreaming, results, text }: any) {
                 </div>
               )}
               <div className="p-4 flex-1">
-                <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest">
-                  EITB
+                <span className="text-[10px] font-bold text-red-600 uppercase tracking-widest">
+                  VIVLA
                 </span>
-                <h3 className="font-bold text-gray-900 group-hover:text-blue-700 line-clamp-2 mt-1">
+                <h3 className="font-bold text-gray-900 group-hover:text-red-700 line-clamp-2 mt-1">
                   {item.title}
                 </h3>
                 {item.summary && (
