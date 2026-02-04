@@ -109,7 +109,7 @@ export default function Home() {
               // Map output to include images array if present
               // [MEGA-PARSER] Aggressive URL collector and surgeon
               // AHORA TAMBIÉN ACEPTA 'image' (singular) de la versión simplificada
-              const mappedResults = propertiesArray.map(p => {
+              const mappedResults = await Promise.all(propertiesArray.map(async (p) => {
                 // Stringify the whole object to find URLs hidden in any field (images, image, image1, etc.)
                 const rawString = JSON.stringify(p);
 
@@ -125,7 +125,7 @@ export default function Home() {
                 }) : [];
 
                 // Filter: Keep only links that look like images (CDN, common extensions)
-                const finalImages = [...new Set(detectedImages)]
+                let finalImages = [...new Set(detectedImages)]
                   .filter(url => {
                     const low = url.toLowerCase();
                     return low.startsWith('http') &&
@@ -133,11 +133,34 @@ export default function Home() {
                   })
                   .slice(0, 3);
 
+                // 🚀 AUTO-SCRAPE: Si solo hay 1 imagen, scrapeamos la URL de la propiedad para obtener más
+                if (finalImages.length < 3 && p.url) {
+                  try {
+                    console.log(`[Auto-Scrape] Obteniendo imágenes adicionales de ${p.url}`);
+                    const response = await fetch('/api/scrape-images', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ url: p.url })
+                    });
+
+                    if (response.ok) {
+                      const { images } = await response.json();
+                      if (images && images.length > 0) {
+                        // Combinar imágenes: la primera del LLM + las scraped
+                        finalImages = [...finalImages, ...images].slice(0, 3);
+                        console.log(`[Auto-Scrape] ✅ Obtenidas ${images.length} imágenes adicionales`);
+                      }
+                    }
+                  } catch (error) {
+                    console.warn('[Auto-Scrape] Error al obtener imágenes:', error);
+                  }
+                }
+
                 return {
                   ...p,
                   images: finalImages
                 };
-              });
+              }));
 
               updateAssistantMessage(null, false, mappedResults, true);
               return "Propiedades mostradas correctamente";
