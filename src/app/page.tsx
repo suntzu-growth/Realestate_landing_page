@@ -108,34 +108,30 @@ export default function Home() {
 
               // Map output to include images array if present
               const mappedResults = propertiesArray.map(p => {
-                let images: string[] = [];
+                // Combine all possible image sources into one searchable string
+                const combinedData = [
+                  p.images,
+                  p.image,
+                  p.image1,
+                  p.image2,
+                  p.image3
+                ].filter(val => typeof val === 'string').join(' ');
 
-                // 1. Collect from images array
-                if (Array.isArray(p.images)) {
-                  images = [...p.images];
-                } else if (typeof p.images === 'string') {
-                  // If it's a string, try to split it by typical patterns (-, whitespace, or https://)
-                  images = p.images.split(/[-\s]+(?=https:\/\/)/).filter((url: string) => url.startsWith('http')).map((url: string) => url.trim());
-                }
+                // Robust Regex: Find all https links, stopping before hyphen-separators, whitespace, or "Resumen:"
+                // We use a non-greedy match that looks ahead for common separators in the PDF/Agent format
+                const urlMatches = combinedData.match(/https:\/\/[^\s]+?(?=- https:\/\/|-https:\/\/|Resumen:|Fuente:|\s|$)/gi);
 
-                // 2. Fallback to image field or individual image1/2/3 fields
-                const fallbackImages = [p.image, p.image1, p.image2, p.image3].filter(img => typeof img === 'string');
-                fallbackImages.forEach(img => {
-                  // If the single string contains multiple URLs, split them
-                  if (img.includes('https://') && (img.includes(' - ') || img.includes('- https://') || img.split('https://').length > 2)) {
-                    const parts = img.split(/(?=https:\/\/)/).map((s: string) => s.replace(/^-/, '').trim()).filter((s: string) => s.startsWith('http'));
-                    images.push(...parts);
-                  } else {
-                    images.push(img);
-                  }
-                });
+                let images = urlMatches ? urlMatches.map((url: string) => {
+                  // Clean up common leftovers at the start/end of the match
+                  return url.replace(/^-+/, '').trim();
+                }) : [];
 
-                // Deduplicate and filter empty
-                images = [...new Set(images)].filter(Boolean);
+                // Deduplicate and filter out broken links
+                images = [...new Set(images)].filter(url => url.startsWith('http'));
 
                 return {
                   ...p,
-                  images: images.length > 0 ? images.slice(0, 3) : [] // Limit to 3 for UI consistency
+                  images: images.length > 0 ? images.slice(0, 3) : []
                 };
               });
 
