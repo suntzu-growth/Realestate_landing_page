@@ -162,6 +162,7 @@ export default function Home() {
                 };
               }));
 
+              lastToolCallTimestamp.current = Date.now();  // ← AÑADIR ESTA LÍNEA ANTES de updateAssistantMessage
               updateAssistantMessage(null, false, mappedResults, true);
               return "Propiedades mostradas correctamente";
             },
@@ -198,35 +199,38 @@ export default function Home() {
             const text = message.message || message.text || '';
             if (!text) return;
 
-            // 1. Filtro de bienvenida (ya lo tienes)
+            // 1. Filtro de bienvenida
             if (isFirstMessageRef.current && text.includes("¡Hola! Soy el asistente")) {
               isFirstMessageRef.current = false;
               return;
             }
 
-            // 2. EL CAMBIO CLAVE:
-            // Si ElevenLabs nos obliga a usar "Auto", enviará texto por el rol 'agent'.
-            // Si ya detectamos que se va a usar una herramienta o ya se usó, 
-            // bloqueamos el streaming de este turno para que no se pegue al final.
+            // 2. Bloquear si ya recibimos texto de la herramienta
             if (receivedToolTextRef.current && message.role === 'agent') {
-              console.log('[Agent] Bloqueando duplicado de streaming (Auto pre-speech)');
+              console.log('[Agent] Bloqueando duplicado post-tool');
               return;
             }
 
-            // 3. Mantenemos tu filtro de seguridad por tiempo
+            // 3. Bloquear durante 5 segundos después de cualquier tool call
             const timeSinceLastTool = Date.now() - lastToolCallTimestamp.current;
-            if (timeSinceLastTool < 2000) return;
+            if (timeSinceLastTool < 5000) {  // ← CAMBIADO DE 2000 A 5000
+              console.log(`[Agent] Bloqueando mensaje (${timeSinceLastTool}ms después de tool)`);
+              return;
+            }
 
-            // 4. Solo si pasa los filtros anteriores, actualizamos el mensaje
+            // 4. Solo si pasa los filtros, actualizar mensaje
             if (message.role === 'agent' || message.type === 'text') {
               setMessages(prev => {
                 const updated = [...prev];
                 const lastIdx = updated.findLastIndex(m => m.role === 'assistant');
                 if (lastIdx !== -1) {
-                  // Evitar que el streaming repita algo que ya está en el contenido
                   if (updated[lastIdx].content.includes(text.trim())) return prev;
 
-                  const baseContent = (updated[lastIdx].content === 'Consultando...' || updated[lastIdx].content === '🔍 Buscando en Vivla...') ? '' : updated[lastIdx].content;
+                  const baseContent = (
+                    updated[lastIdx].content === 'Consultando...' ||
+                    updated[lastIdx].content === '🔍 Buscando en Vivla...'
+                  ) ? '' : updated[lastIdx].content;
+
                   updated[lastIdx] = {
                     ...updated[lastIdx],
                     content: baseContent + text,

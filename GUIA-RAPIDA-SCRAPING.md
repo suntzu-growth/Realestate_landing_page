@@ -13,7 +13,7 @@ node scrape-ahora.js
 ```
 
 ### Paso 3: Esperar (2-5 minutos)
-El script extraerá noticias de Orain.eus y Kirolak EITB.
+El script extraerá información de las propiedades de Vivla.com.
 
 ### Paso 4: Compartir con tus Compis
 Los archivos estarán en `./data/scraping/`:

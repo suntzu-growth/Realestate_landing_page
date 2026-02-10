@@ -20,7 +20,7 @@ node prepare-for-rag.js
 
 | Archivo | Descripción |
 |---------|-------------|
-| `run-scraper.js` | Script principal de scraping (Orain + Kirolak) |
+| `run-scraper.js` | Script principal de scraping (Vivla) |
 | `scrape-ahora.js` | Script de ejecución rápida |
 | `prepare-for-rag.js` | Conversor de datos a formatos LangChain, CSV, etc. |
 | `json-to-pdf.js` | Generador de reportes en PDF |
