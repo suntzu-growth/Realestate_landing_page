@@ -18,27 +18,13 @@ export default function Home() {
   const conversationRef = useRef<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isFirstMessageRef = useRef(true);
-  const lastToolCallTimestamp = useRef<number>(0);
-  const lastContentRef = useRef<string>(''); // ✅ Para detectar duplicados de herramientas
-  const receivedToolTextRef = useRef<boolean>(false); // ✅ NUEVO: Indica que una herramienta ya dio el texto final
+  const toolCalledInTurnRef = useRef<boolean>(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   const updateAssistantMessage = (content: string | null, streaming: boolean, results?: any[], fromTool: boolean = false) => {
-    // ✅ NUEVO: Ignorar si el contenido es exactamente el mismo que el anterior
-    if (fromTool && content && content === lastContentRef.current) {
-      console.log('[DEBUG] Ignorando client tool duplicado - mismo contenido');
-      return;
-    }
-
-    // ✅ NUEVO: Si viene de herramienta y trae texto, marcar que ya tenemos el texto final
-    if (fromTool && content && content.trim().length > 0) {
-      receivedToolTextRef.current = true;
-      lastContentRef.current = content;
-    }
-
     setMessages(prev => {
       const updated = [...prev];
       const lastIdx = updated.findLastIndex(m => m.role === 'assistant');
@@ -48,7 +34,6 @@ export default function Home() {
 
         let finalContent;
         if (fromTool) {
-          lastToolCallTimestamp.current = Date.now();
           finalContent = content || lastMessage.content;
         } else {
           const baseContent = (lastMessage.content === 'Consultando...' || lastMessage.content === '🔍 Buscando en Vivla...') ? '' : lastMessage.content;
@@ -79,29 +64,8 @@ export default function Home() {
         const conversation = await TextConversation.startSession({
           signedUrl,
           clientTools: {
-            displayNewsResults: async ({ news, summary }: any) => {
-              console.log('[Client Tool] displayNewsResults:', { news, summary });
-
-              const cleanSummary = (summary && summary.trim().length > 1) ? summary : null;
-              const newsArray = Array.isArray(news) ? news : [news];
-
-              // ✅ NO enviamos el summary para que no sobreescriba el texto de displayTextResponse
-              updateAssistantMessage(null, false, newsArray, true);
-              return "Noticias mostradas correctamente";
-            },
-
-            displaySportsResults: async ({ news, summary }: any) => {
-              console.log('[Client Tool] displaySportsResults:', { news, summary });
-
-              const cleanSummary = (summary && summary.trim().length > 1) ? summary : null;
-              const newsArray = Array.isArray(news) ? news : [news];
-
-              // ✅ NO enviamos el summary para que no sobreescriba el texto de displayTextResponse
-              updateAssistantMessage(null, false, newsArray, true);
-              return "Deportes mostrados correctamente";
-            },
-
             displayPropertyResults: async ({ properties, summary }: any) => {
+              toolCalledInTurnRef.current = true;
               console.log('[Client Tool] displayPropertyResults:', { properties, summary });
 
               const propertiesArray = Array.isArray(properties) ? properties : [properties];
@@ -162,15 +126,15 @@ export default function Home() {
                 };
               }));
 
-              lastToolCallTimestamp.current = Date.now();  // ← AÑADIR ESTA LÍNEA ANTES de updateAssistantMessage
               updateAssistantMessage(null, false, mappedResults, true);
-              return "Propiedades mostradas correctamente";
+              return "Propiedades mostradas visualmente al usuario. No generes texto adicional.";
             },
 
             displayTextResponse: async ({ text }: any) => {
+              toolCalledInTurnRef.current = true;
               console.log('[Client Tool] displayTextResponse:', text);
               updateAssistantMessage(text, false, undefined, true);
-              return "Texto actualizado";
+              return "Texto mostrado al usuario. No generes texto adicional.";
             },
 
             saveUserData: async ({ name, email }: any) => {
@@ -205,20 +169,13 @@ export default function Home() {
               return;
             }
 
-            // 2. Bloquear si ya recibimos texto de la herramienta
-            if (receivedToolTextRef.current && message.role === 'agent') {
-              console.log('[Agent] Bloqueando duplicado post-tool');
+            // 2. Bloquear todo texto post-tool en este turno
+            if (toolCalledInTurnRef.current && message.role === 'agent') {
+              console.log('[Agent] Bloqueando post-tool message');
               return;
             }
 
-            // 3. Bloquear durante 5 segundos después de cualquier tool call
-            const timeSinceLastTool = Date.now() - lastToolCallTimestamp.current;
-            if (timeSinceLastTool < 5000) {  // ← CAMBIADO DE 2000 A 5000
-              console.log(`[Agent] Bloqueando mensaje (${timeSinceLastTool}ms después de tool)`);
-              return;
-            }
-
-            // 4. Solo si pasa los filtros, actualizar mensaje
+            // 3. Solo si pasa los filtros, actualizar mensaje
             if (message.role === 'agent' || message.type === 'text') {
               setMessages(prev => {
                 const updated = [...prev];
@@ -269,9 +226,8 @@ export default function Home() {
   const handleSearch = async (query: string, isCategorySelection: boolean = false) => {
     if (!query || agentStatus !== 'connected') return;
 
-    // RESETEAR AQUÍ
-    receivedToolTextRef.current = false;
-    lastContentRef.current = '';
+    // Reset flags de turno
+    toolCalledInTurnRef.current = false;
     isFirstMessageRef.current = false;
 
     let processedQuery = query;
