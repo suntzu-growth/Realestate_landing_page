@@ -45,7 +45,7 @@ export default function Home() {
           content: finalContent,
           isStreaming: streaming,
           results: results || lastMessage.results,
-          timestamp: Date.now()
+          timestamp: finalContent !== lastMessage.content ? Date.now() : lastMessage.timestamp
         };
       }
       return updated;
