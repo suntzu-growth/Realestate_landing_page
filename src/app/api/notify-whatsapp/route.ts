@@ -3,13 +3,13 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nombre, email, telefono, vivienda, destino, presupuesto, urgencia, notas } = body;
+    const { nombre, telefono, url_vivienda, horario } = body;
 
     // Validar campos obligatorios
-    if (!nombre || !email || !telefono) {
+    if (!nombre || !telefono || !url_vivienda || !horario) {
       return NextResponse.json({
         success: false,
-        error: 'Missing required fields: nombre, email, telefono'
+        error: 'Missing required fields: nombre, telefono, url_vivienda, horario'
       }, { status: 400 });
     }
 
@@ -18,9 +18,8 @@ export async function POST(request: NextRequest) {
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
     const templateName = process.env.WHATSAPP_TEMPLATE_NAME;
     const templateLanguage = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
-    const aePhone = process.env.WHATSAPP_AE_PHONE;
 
-    if (!apiKey || !phoneNumberId || !templateName || !aePhone) {
+    if (!apiKey || !phoneNumberId || !templateName) {
       console.error('[notify-whatsapp] Missing environment variables');
       return NextResponse.json({
         success: false,
@@ -29,23 +28,18 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('\n' + '='.repeat(50));
-    console.log('[notify-whatsapp] ENVIANDO NOTIFICACION');
+    console.log('[notify-whatsapp] ENVIANDO NOTIFICACION AL LEAD');
     console.log('------------------------------------------');
-    console.log(`Lead: ${nombre} | ${email} | ${telefono}`);
-    console.log(`Vivienda: ${vivienda || 'N/A'} | Destino: ${destino || 'N/A'}`);
-    console.log(`AE Phone: ${aePhone}`);
+    console.log(`Lead: ${nombre} | Tel: ${telefono}`);
+    console.log(`Vivienda: ${url_vivienda}`);
+    console.log(`Horario: ${horario}`);
     console.log('='.repeat(50) + '\n');
 
-    // Construir parámetros de la plantilla en el orden esperado
+    // Parámetros de la plantilla: {{1}}=nombre, {{2}}=horario, {{3}}=url_vivienda
     const templateParameters = [
-      { type: "text", text: nombre || '' },
-      { type: "text", text: email || '' },
-      { type: "text", text: telefono || '' },
-      { type: "text", text: vivienda || 'No especificada' },
-      { type: "text", text: destino || 'No especificado' },
-      { type: "text", text: presupuesto || 'No especificado' },
-      { type: "text", text: urgencia || 'No especificada' },
-      { type: "text", text: notas || 'Sin notas adicionales' }
+      { type: "text", text: nombre },
+      { type: "text", text: horario },
+      { type: "text", text: url_vivienda }
     ];
 
     // Llamar a ElevenLabs WhatsApp API
@@ -57,7 +51,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         phone_number_id: phoneNumberId,
-        to: aePhone,
+        to: telefono,
         template_name: templateName,
         template_language: templateLanguage,
         components: [
@@ -72,10 +66,10 @@ export async function POST(request: NextRequest) {
     const result = await response.json();
 
     if (response.ok) {
-      console.log('[notify-whatsapp] WhatsApp enviado correctamente:', result);
+      console.log('[notify-whatsapp] WhatsApp enviado al lead correctamente:', result);
       return NextResponse.json({
         success: true,
-        message: 'WhatsApp notification sent',
+        message: 'WhatsApp notification sent to lead',
         data: result
       });
     } else {
