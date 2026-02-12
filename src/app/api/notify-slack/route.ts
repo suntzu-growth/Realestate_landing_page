@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+const HUBSPOT_ACCOUNT_ID = '147088965';
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { nombre, email, telefono, url_vivienda, horario, notas } = body;
+    const { nombre, email, telefono, url_vivienda, horario, hubspot_contact_id } = body;
 
     if (!nombre || !email) {
       return NextResponse.json({
@@ -26,7 +28,13 @@ export async function POST(request: NextRequest) {
     console.log('[notify-slack] ENVIANDO NOTIFICACION A SLACK');
     console.log('------------------------------------------');
     console.log(`Lead: ${nombre} | ${email} | ${telefono || 'N/A'}`);
+    console.log(`HubSpot Contact ID: ${hubspot_contact_id || 'N/A'}`);
     console.log('='.repeat(50) + '\n');
+
+    // Construir enlace a HubSpot
+    const hubspotLink = hubspot_contact_id
+      ? `https://app-eu1.hubspot.com/contacts/${HUBSPOT_ACCOUNT_ID}/contact/${hubspot_contact_id}`
+      : null;
 
     // Construir mensaje de Slack con bloques
     const slackMessage = {
@@ -67,11 +75,11 @@ export async function POST(request: NextRequest) {
             text: `*Vivienda de interés:*\n<${url_vivienda}|Ver propiedad>`
           }
         }] : []),
-        ...(notas ? [{
+        ...(hubspotLink ? [{
           type: "section",
           text: {
             type: "mrkdwn",
-            text: `*Notas:*\n${notas}`
+            text: `*HubSpot:*\n<${hubspotLink}|Ver contacto en HubSpot>`
           }
         }] : []),
         {
