@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     }
 
     const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+    const disableSlack = process.env.DISABLE_SLACK_NOTIFICATIONS === 'true';
 
     if (!slackWebhookUrl) {
       console.error('[notify-slack] Missing SLACK_WEBHOOK_URL');
@@ -30,6 +31,16 @@ export async function POST(request: NextRequest) {
     console.log(`Lead: ${nombre} | ${email} | ${telefono || 'N/A'}`);
     console.log(`HubSpot Contact ID: ${hubspot_contact_id || 'N/A'}`);
     console.log('='.repeat(50) + '\n');
+
+    // MODE DE PRUEBA: Si DISABLE_SLACK_NOTIFICATIONS=true, simular éxito sin enviar
+    if (disableSlack) {
+      console.log('[notify-slack] ⚠️ MODO PRUEBA: Notificación NO enviada (DISABLE_SLACK_NOTIFICATIONS=true)');
+      return NextResponse.json({
+        success: true,
+        message: 'Slack notification skipped (test mode)',
+        test_mode: true
+      });
+    }
 
     // Construir enlace a HubSpot
     const hubspotLink = hubspot_contact_id
