@@ -60,16 +60,6 @@ export function Header({ conversationId }: { conversationId?: string }) {
                             />
                         </div>
                     </a>
-
-                    {/* Botón de Crear cuenta */}
-                    <div className="flex items-center space-x-4">
-                        <button
-                            onClick={handleCreateAccount}
-                            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium text-sm"
-                        >
-                            Crear cuenta
-                        </button>
-                    </div>
                 </div>
             </header>
 
