@@ -4,9 +4,18 @@ export function SearchHero() {
             <img
                 src="/suntzu_logo_centro.svg"
                 alt="SunTzu"
-                className="h-12 md:h-16 w-auto"
+                className="h-20 md:h-28 w-auto"
             />
-            <p className="text-sm md:text-base text-gray-700 font-sans max-w-xl mx-auto leading-relaxed px-4">
+            <p
+                className="text-xl md:text-2xl max-w-xl mx-auto px-4"
+                style={{
+                    fontFamily: '"Inter", "Host Grotesk", sans-serif',
+                    fontWeight: 300,
+                    letterSpacing: '-0.01em',
+                    lineHeight: '120%',
+                    color: 'rgb(17, 89, 122)'
+                }}
+            >
                 Bienvenido a la forma moderna de vivir. Sea dueño de su segunda residencia sin las complicaciones de la propiedad total y acceda a nuestra red de viviendas para elevar su experiencia vacacional.
             </p>
         </div>
