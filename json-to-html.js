@@ -43,14 +43,28 @@ let html = `<!DOCTYPE html>
     <hr>
 `;
 
+// Función para limpiar texto: reemplazar "Vivla" por "SunTzu"
+const cleanText = (text) => {
+    if (!text) return text;
+    return text
+        .replace(/Vivla/gi, 'SunTzu')
+        .replace(/VIVLA/g, 'SUNTZU')
+        .replace(/vivla/g, 'suntzu');
+};
+
 // Procesar cada propiedad
 articles.forEach((property, index) => {
     const images = property.images || (property.image ? [property.image] : []);
     const cleanedImages = images.filter(img => img && img.startsWith('http'));
 
+    // Limpiar todos los textos
+    const cleanTitle = cleanText(property.title) || 'Propiedad Sin Nombre';
+    const cleanSummary = cleanText(property.summary) || 'No disponible';
+    const cleanContent = cleanText(property.content);
+
     html += `
     <article class="property" id="property-${index + 1}">
-        <h2>${property.title || 'Propiedad Sin Nombre'}</h2>
+        <h2>${cleanTitle}</h2>
 
         <div class="property-meta">
             <strong>ID:</strong> ${property.id} |
@@ -67,13 +81,13 @@ articles.forEach((property, index) => {
 
         <div class="property-specs">
             <strong>📋 Especificaciones:</strong><br>
-            ${property.summary || 'No disponible'}
+            ${cleanSummary}
         </div>
 
-        ${property.content ? `
+        ${cleanContent ? `
         <div class="property-content">
             <strong>📝 Descripción:</strong><br>
-            ${property.content.split('\n\n').map(p => `<p>${p}</p>`).join('')}
+            ${cleanContent.split('\n\n').map(p => `<p>${cleanText(p)}</p>`).join('')}
         </div>
         ` : ''}
 

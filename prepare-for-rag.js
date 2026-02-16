@@ -21,17 +21,26 @@ async function prepareForRag() {
 
     console.log(`✅ Cargados ${articles.length} artículos`);
 
+    // Función para limpiar texto: reemplazar "Vivla" por "SunTzu"
+    const cleanText = (text) => {
+        if (!text) return text;
+        return text
+            .replace(/Vivla/gi, 'SunTzu')
+            .replace(/VIVLA/g, 'SUNTZU')
+            .replace(/vivla/g, 'suntzu');
+    };
+
     // 1. LangChain Format
     console.log('🔗 Generando formato LangChain...');
     const langchainDocs = articles.map(a => {
         const imgList = (a.images && a.images.length > 0) ? a.images.join(', ') : (a.image || "");
         return {
-            pageContent: `Título: ${a.title}\nURL: ${a.url}\nImágenes: ${imgList}\nResumen: ${a.summary}\n\nContenido: ${a.content || a.summary}`,
+            pageContent: `Título: ${cleanText(a.title)}\nURL: ${a.url}\nImágenes: ${imgList}\nResumen: ${cleanText(a.summary)}\n\nContenido: ${cleanText(a.content || a.summary)}`,
             metadata: {
                 source: a.url,
                 image: a.image,
                 images: a.images || (a.image ? [a.image] : []),
-                title: a.title,
+                title: cleanText(a.title),
                 category: a.category,
                 date: a.publishDate || a.scrapedAt,
                 author: 'SunTzu'
@@ -46,7 +55,7 @@ async function prepareForRag() {
         const imgList = (a.images && a.images.length > 0) ? a.images.join(', ') : (a.image || "");
         return {
             id: a.id,
-            text: `Título: ${a.title}. URL: ${a.url}. Imágenes: ${imgList}. Resumen: ${a.summary}. Contenido: ${a.content || ""}`,
+            text: `Título: ${cleanText(a.title)}. URL: ${a.url}. Imágenes: ${imgList}. Resumen: ${cleanText(a.summary)}. Contenido: ${cleanText(a.content || "")}`,
             metadata: {
                 url: a.url,
                 image: a.image,
@@ -63,8 +72,8 @@ async function prepareForRag() {
     const chunks = [];
     articles.forEach(a => {
         const imgList = (a.images && a.images.length > 0) ? a.images.join(', ') : (a.image || "");
-        const header = `Título: ${a.title}\nURL: ${a.url}\nImágenes: ${imgList}\nResumen: ${a.summary}\n\n`;
-        const bodyContent = a.content || a.summary;
+        const header = `Título: ${cleanText(a.title)}\nURL: ${a.url}\nImágenes: ${imgList}\nResumen: ${cleanText(a.summary)}\n\n`;
+        const bodyContent = cleanText(a.content || a.summary);
         const words = bodyContent.split(/\s+/);
         const chunkSize = 500;
 
@@ -73,7 +82,7 @@ async function prepareForRag() {
                 articleId: a.id,
                 chunkIndex: Math.floor(i / chunkSize),
                 content: header + words.slice(i, i + chunkSize).join(' '),
-                metadata: { url: a.url, title: a.title, image: a.image, images: a.images }
+                metadata: { url: a.url, title: cleanText(a.title), image: a.image, images: a.images }
             });
         }
     });
@@ -84,7 +93,7 @@ async function prepareForRag() {
     let fullTxt = "";
     articles.forEach(a => {
         const imgList = (a.images && a.images.length > 0) ? a.images.join('\n- ') : (a.image || "No disponible");
-        fullTxt += `=== PROPIEDAD ===\nTítulo: ${a.title}\nURL: ${a.url}\nImágenes:\n- ${imgList}\nResumen: ${a.summary}\nContenido: ${a.content || a.summary}\n\n`;
+        fullTxt += `=== PROPIEDAD ===\nTítulo: ${cleanText(a.title)}\nURL: ${a.url}\nImágenes:\n- ${imgList}\nResumen: ${cleanText(a.summary)}\nContenido: ${cleanText(a.content || a.summary)}\n\n`;
     });
     fs.writeFileSync(path.join(outputDir, 'rag-content.txt'), fullTxt);
 
@@ -92,7 +101,7 @@ async function prepareForRag() {
     console.log('📄 Generando CSV...');
     let csv = 'Title,Category,URL,Source\n';
     articles.forEach(a => {
-        const safeTitle = a.title.replace(/"/g, '""');
+        const safeTitle = cleanText(a.title).replace(/"/g, '""');
         csv += `"${safeTitle}","${a.category}","${a.url}","${a.source}"\n`;
     });
     fs.writeFileSync(path.join(outputDir, 'articles.csv'), csv);
