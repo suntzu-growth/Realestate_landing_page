@@ -93,7 +93,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                         </div>
 
                         <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-                            {isSuccess ? "¡Bienvenido a Vivla!" : "Personaliza tu experiencia"}
+                            {isSuccess ? "¡Bienvenido a SunTzu!" : "Personaliza tu experiencia"}
                         </h2>
 
                         {isSuccess ? (
@@ -168,7 +168,7 @@ export function Header({ conversationId }: { conversationId?: string }) {
                         )}
 
                         <p className="text-xs text-gray-500 mt-4 text-center">
-                            Gracias por tu interés en Vivla 🙏
+                            Gracias por tu interés en SunTzu 🙏
                         </p>
                     </div>
                 </div>

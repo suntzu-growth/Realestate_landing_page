@@ -110,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     <p>¡Estamos aquí para ayudarte a encontrar tu hogar ideal!</p>
 
-    <p>Saludos cordiales,<br><strong>Equipo Vivla</strong></p>
+    <p>Saludos cordiales,<br><strong>Equipo SunTzu</strong></p>
   </div>
   <div class="footer">
     <p>Este es un correo automático. Por favor no respondas a este mensaje.</p>
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         from: emailFrom,
         to: email,
-        subject: '¡Gracias por tu interés en Vivla! 🏡',
+        subject: '¡Gracias por tu interés en SunTzu! 🏡',
         html: emailHtml
       })
     });

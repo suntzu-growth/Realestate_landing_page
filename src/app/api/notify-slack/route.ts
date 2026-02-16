@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
           type: "header",
           text: {
             type: "plain_text",
-            text: ":house: Nuevo Lead desde Vivla Chat",
+            text: ":house: Nuevo Lead desde SunTzu Chat",
             emoji: true
           }
         },
