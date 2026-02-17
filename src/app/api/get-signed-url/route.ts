@@ -5,7 +5,11 @@ export async function GET() {
         const agentId = process.env.NEXT_PUBLIC_AGENT_ID;
         const apiKey = process.env.ELEVENLABS_API_KEY;
 
+        console.log('[API] Agent ID:', agentId ? 'Present' : 'Missing');
+        console.log('[API] API Key:', apiKey ? 'Present' : 'Missing');
+
         if (!agentId || !apiKey) {
+            console.error('[API] Configuration missing');
             return NextResponse.json(
                 { error: 'Missing configuration' },
                 { status: 500 }
@@ -22,13 +26,15 @@ export async function GET() {
         );
 
         if (!response.ok) {
-            throw new Error('Failed to get signed URL');
+            const errorText = await response.text();
+            console.error('[API] ElevenLabs Error:', response.status, errorText);
+            throw new Error(`ElevenLabs API failed with status ${response.status}`);
         }
 
         const data = await response.json();
         return NextResponse.json({ signedUrl: data.signed_url });
     } catch (error: any) {
-        console.error('Error generating signed URL:', error);
+        console.error("Failed to generate signed URL:", error);
         return NextResponse.json(
             { error: 'Failed to generate signed URL', details: error.message },
             { status: 500 }
